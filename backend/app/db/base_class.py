@@ -1,5 +1,6 @@
-from typing import Any
+# app/db/base_class.py
 from datetime import datetime
+from typing import Any
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import DateTime
 
