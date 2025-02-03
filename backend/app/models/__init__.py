@@ -4,6 +4,7 @@ from .dataset import Dataset
 from .model import Model
 from .training import Training
 from .evaluation import Evaluation
+from .base import BaseModel
 
 __all__ = [
     "User",
@@ -11,5 +12,7 @@ __all__ = [
     "Dataset",
     "Model",
     "Training",
-    "Evaluation"
+    "Evaluation",
+    "BaseModel"
+
 ]
