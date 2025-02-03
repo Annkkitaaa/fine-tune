@@ -1,21 +1,22 @@
+# app/schemas/relationships.py
 from typing import Optional
 from pydantic import BaseModel
-from .model import Model
+from .model import MLModel  # Updated from Model to MLModel
 from .dataset import Dataset
 from .training import Training
 from .evaluation import Evaluation
 
 class TrainingWithRelations(Training):
-    model: Optional[Model] = None
-    dataset: Optional[Dataset] = None
+    model: Optional[MLModel]  # Updated to MLModel
+    dataset: Optional[Dataset]
 
     class Config:
         from_attributes = True
 
 class EvaluationWithRelations(Evaluation):
-    model: Optional[Model] = None
-    dataset: Optional[Dataset] = None
-    training: Optional[Training] = None
+    model: Optional[MLModel]  # Updated to MLModel
+    dataset: Optional[Dataset]
+    training: Optional[Training]
 
     class Config:
         from_attributes = True

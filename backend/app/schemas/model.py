@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from .base import TimestampMixin
 
-class MLModelBase(BaseModel):  # Renamed from ModelBase
+class MLModelBase(BaseModel):  # Using MLModel everywhere
     name: str
     description: Optional[str] = None
     framework: str
@@ -12,13 +12,13 @@ class MLModelBase(BaseModel):  # Renamed from ModelBase
     config: Dict[str, Any]
     hyperparameters: Optional[Dict[str, Any]] = None
 
-class MLModelCreate(MLModelBase):  # Renamed from ModelCreate
+class MLModelCreate(MLModelBase):
     pass
 
-class MLModelUpdate(MLModelBase):  # Renamed from ModelUpdate
+class MLModelUpdate(MLModelBase):
     pass
 
-class MLModel(MLModelBase, TimestampMixin):  # Renamed from Model
+class MLModel(MLModelBase, TimestampMixin):
     id: int
     owner_id: int
     project_id: Optional[int] = None
