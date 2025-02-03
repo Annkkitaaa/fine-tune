@@ -1,17 +1,14 @@
-# app/db/init_db.py
 from sqlalchemy.orm import Session
-
 from app.core.config import settings
-from app.db.base_class import Base  # noqa
-from app.db.session import engine
-from app.models.user import User  # noqa
+from app.db.base_class import Base
+from app.db.session import engine, SessionLocal
+from app.models.user import User
 
-def init_db(db: Session) -> None:
-    # Create all tables
+def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 def get_db():
-    db = Session(engine)
+    db = SessionLocal()
     try:
         yield db
     finally:

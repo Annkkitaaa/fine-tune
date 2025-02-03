@@ -1,4 +1,3 @@
-# app/db/session.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -16,5 +15,4 @@ engine = create_engine(
     pool_recycle=3600,
 )
 
-# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
