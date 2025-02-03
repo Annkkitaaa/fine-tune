@@ -1,5 +1,6 @@
+# app/api/v1/__init__.py
 from fastapi import APIRouter
-from app.api.v1 import auth, data, models, training, evaluation, deployment
+from . import auth, data, models, training, evaluation, deployment
 
 api_router = APIRouter()
 

@@ -1,116 +1,67 @@
-
 from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 from jose import jwt, JWTError
 from fastapi import HTTPException, status
-from pydantic import ValidationError
 
 from app.core.config import settings
 from app.schemas.token import TokenPayload
 
 ALGORITHM = "HS256"
 
-class JWTHandler:
-    @staticmethod
-    def create_access_token(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None
-    ) -> str:
-        """
-        Create JWT access token
-        """
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(
-                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-            )
-        
-        to_encode = {
-            "exp": expire,
-            "sub": str(subject),
-            "iat": datetime.utcnow()
-        }
-        
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.SECRET_KEY,
-            algorithm=ALGORITHM
+def create_access_token(
+    subject: Union[str, Any],
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Create JWT access token
+    """
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
-        
-        return encoded_jwt
+    
+    to_encode = {"exp": expire, "sub": str(subject)}
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+    return encoded_jwt
 
-    @staticmethod
-    def create_refresh_token(
-        subject: Union[str, Any],
-        expires_delta: Optional[timedelta] = None
-    ) -> str:
-        """
-        Create JWT refresh token
-        """
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(days=30)
-        
-        to_encode = {
-            "exp": expire,
-            "sub": str(subject),
-            "iat": datetime.utcnow(),
-            "type": "refresh"
-        }
-        
-        encoded_jwt = jwt.encode(
-            to_encode,
+def decode_access_token(token: str) -> TokenPayload:
+    """
+    Decode and validate JWT token
+    """
+    try:
+        payload = jwt.decode(
+            token,
             settings.SECRET_KEY,
-            algorithm=ALGORITHM
+            algorithms=[ALGORITHM]
         )
+        token_data = TokenPayload(**payload)
         
-        return encoded_jwt
-
-    @staticmethod
-    def decode_token(token: str) -> TokenPayload:
-        """
-        Decode and validate JWT token
-        """
-        try:
-            payload = jwt.decode(
-                token,
-                settings.SECRET_KEY,
-                algorithms=[ALGORITHM]
-            )
-            
-            token_data = TokenPayload(**payload)
-            
-            if datetime.fromtimestamp(token_data.exp) < datetime.utcnow():
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token has expired",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-                
-            return token_data
-            
-        except JWTError:
+        if datetime.fromtimestamp(token_data.exp) < datetime.utcnow():
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Could not validate credentials",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except ValidationError:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid token payload",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        return token_data
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    @staticmethod
-    def verify_token(token: str) -> bool:
-        """
-        Verify if token is valid
-        """
-        try:
-            JWTHandler.decode_token(token)
-            return True
-        except HTTPException:
-            return False
+def verify_token(token: str) -> bool:
+    """
+    Verify if token is valid
+    """
+    try:
+        decode_access_token(token)
+        return True
+    except HTTPException:
+        return False
