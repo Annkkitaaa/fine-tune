@@ -1,18 +1,21 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, JSON
-from sqlalchemy.orm import relationship
-from app.db.base import Base
+# app/models/project.py
+from typing import Optional, List
+from sqlalchemy import String, ForeignKey, JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base_class import Base
 
 class Project(Base):
-    """Project model for organizing ML experiments"""
-    
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    owner_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    settings = Column(JSON, nullable=True)
-    
+    __tablename__ = "projects"
+
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
     # Relationships
-    owner = relationship("User", back_populates="projects")
-    datasets = relationship("Dataset", back_populates="project")
-    models = relationship("Model", back_populates="project")
-    trainings = relationship("Training", back_populates="project")
-    evaluations = relationship("Evaluation", back_populates="project")
+    owner: Mapped["User"] = relationship("User", back_populates="projects")
+    datasets: Mapped[List["Dataset"]] = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
+    models: Mapped[List["Model"]] = relationship("Model", back_populates="project", cascade="all, delete-orphan")
+    trainings: Mapped[List["Training"]] = relationship("Training", back_populates="project", cascade="all, delete-orphan")
+    evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="project", cascade="all, delete-orphan")
