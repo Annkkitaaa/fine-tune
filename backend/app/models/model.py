@@ -1,26 +1,30 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, JSON, Boolean, Float
-from sqlalchemy.orm import relationship
-from app.db.base import Base
+# app/models/model.py
+from typing import Optional, List
+from sqlalchemy import String, ForeignKey, JSON, Boolean, Float
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-class Model(Base):
-    """Model for managing ML models and their configurations"""
-    
-    name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    framework = Column(String, nullable=False)  # pytorch, tensorflow, sklearn
-    architecture = Column(String, nullable=False)
-    version = Column(String, nullable=False, default="1.0.0")
-    config = Column(JSON, nullable=False)  # model architecture config
-    hyperparameters = Column(JSON, nullable=True)  # training hyperparameters
-    metrics = Column(JSON, nullable=True)  # latest evaluation metrics
-    size = Column(Float, nullable=True)  # model size in MB
-    is_default = Column(Boolean, default=False)
-    
-    owner_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    project_id = Column(Integer, ForeignKey("project.id"), nullable=True)
-    
+from app.db.base_class import Base
+
+class MLModel(Base):  # Renamed from Model to MLModel to avoid confusion
+    __tablename__ = "ml_models"  # Added tablename
+
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    framework: Mapped[str] = mapped_column(String, nullable=False)  # pytorch, tensorflow, etc.
+    architecture: Mapped[str] = mapped_column(String, nullable=False)
+    version: Mapped[str] = mapped_column(String, nullable=False, default="1.0.0")
+    config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    hyperparameters: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    metrics: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    size: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # in MB
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Foreign Keys
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    project_id: Mapped[Optional[int]] = mapped_column(ForeignKey("projects.id"), nullable=True)
+
     # Relationships
-    owner = relationship("User", back_populates="models")
-    project = relationship("Project", back_populates="models")
-    trainings = relationship("Training", back_populates="model")
-    evaluations = relationship("Evaluation", back_populates="model")
+    owner: Mapped["User"] = relationship("User", back_populates="models")
+    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="models")
+    trainings: Mapped[List["Training"]] = relationship("Training", back_populates="model")
+    evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="model")

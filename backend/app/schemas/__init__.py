@@ -4,7 +4,7 @@ from .token import Token, TokenPayload, TokenData
 from .user import User, UserCreate, UserUpdate
 from .project import Project, ProjectCreate, ProjectUpdate
 from .dataset import Dataset, DatasetCreate, DatasetUpdate
-from .model import Model, ModelCreate, ModelUpdate
+from .model import MLModel, MLModelCreate, MLModelUpdate  # Updated names
 from .training import Training, TrainingCreate, TrainingUpdate, TrainingStatus
 from .evaluation import Evaluation, EvaluationCreate, EvaluationUpdate
 from .relationships import TrainingWithRelations, EvaluationWithRelations
@@ -15,7 +15,7 @@ __all__ = [
     "User", "UserCreate", "UserUpdate",
     "Project", "ProjectCreate", "ProjectUpdate",
     "Dataset", "DatasetCreate", "DatasetUpdate",
-    "Model", "ModelCreate", "ModelUpdate",
+    "MLModel", "MLModelCreate", "MLModelUpdate",  # Updated names
     "Training", "TrainingCreate", "TrainingUpdate", "TrainingStatus",
     "Evaluation", "EvaluationCreate", "EvaluationUpdate",
     "TrainingWithRelations", "EvaluationWithRelations"

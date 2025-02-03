@@ -1,8 +1,9 @@
+# app/schemas/model.py
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from .base import TimestampMixin
 
-class ModelBase(BaseModel):
+class MLModelBase(BaseModel):  # Renamed from ModelBase
     name: str
     description: Optional[str] = None
     framework: str
@@ -11,13 +12,13 @@ class ModelBase(BaseModel):
     config: Dict[str, Any]
     hyperparameters: Optional[Dict[str, Any]] = None
 
-class ModelCreate(ModelBase):
+class MLModelCreate(MLModelBase):  # Renamed from ModelCreate
     pass
 
-class ModelUpdate(ModelBase):
+class MLModelUpdate(MLModelBase):  # Renamed from ModelUpdate
     pass
 
-class Model(ModelBase, TimestampMixin):
+class MLModel(MLModelBase, TimestampMixin):  # Renamed from Model
     id: int
     owner_id: int
     project_id: Optional[int] = None
