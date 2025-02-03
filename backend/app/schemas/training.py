@@ -1,9 +1,7 @@
-# app/schemas/training.py
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, ForwardRef
 from datetime import datetime
 from pydantic import BaseModel
 from enum import Enum
-
 from .base import TimestampMixin
 
 class TrainingStatus(str, Enum):

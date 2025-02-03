@@ -5,9 +5,9 @@ from .user import User, UserCreate, UserUpdate
 from .project import Project, ProjectCreate, ProjectUpdate
 from .dataset import Dataset, DatasetCreate, DatasetUpdate
 from .model import Model, ModelCreate, ModelUpdate
-from .training import Training, TrainingCreate, TrainingUpdate
-from .relations import TrainingWithRelations
+from .training import Training, TrainingCreate, TrainingUpdate, TrainingStatus
 from .evaluation import Evaluation, EvaluationCreate, EvaluationUpdate
+from .relationships import TrainingWithRelations, EvaluationWithRelations
 
 __all__ = [
     "TimestampMixin",
@@ -16,7 +16,7 @@ __all__ = [
     "Project", "ProjectCreate", "ProjectUpdate",
     "Dataset", "DatasetCreate", "DatasetUpdate",
     "Model", "ModelCreate", "ModelUpdate",
-    "Training", "TrainingCreate", "TrainingUpdate",
-    "TrainingWithRelations",
+    "Training", "TrainingCreate", "TrainingUpdate", "TrainingStatus",
     "Evaluation", "EvaluationCreate", "EvaluationUpdate",
+    "TrainingWithRelations", "EvaluationWithRelations"
 ]

@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
-from datetime import datetime
 from pydantic import BaseModel
+from .base import TimestampMixin
 
 class DatasetBase(BaseModel):
     name: str
@@ -14,7 +14,7 @@ class DatasetCreate(DatasetBase):
 class DatasetUpdate(DatasetBase):
     pass
 
-class Dataset(DatasetBase):
+class Dataset(DatasetBase, TimestampMixin):
     id: int
     owner_id: int
     project_id: Optional[int] = None
@@ -23,8 +23,6 @@ class Dataset(DatasetBase):
     num_rows: Optional[int] = None
     num_features: Optional[int] = None
     metadata: Optional[Dict[str, Any]] = None
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

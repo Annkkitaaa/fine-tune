@@ -1,7 +1,5 @@
-# app/schemas/model.py
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
-
 from .base import TimestampMixin
 
 class ModelBase(BaseModel):

@@ -1,6 +1,6 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
-from datetime import datetime
+from .base import TimestampMixin
 
 class EvaluationBase(BaseModel):
     metrics: Dict[str, Any]
@@ -9,46 +9,26 @@ class EvaluationBase(BaseModel):
 class EvaluationCreate(EvaluationBase):
     model_id: int
     dataset_id: int
-    training_id: Optional[int]
+    training_id: Optional[int] = None
 
 class EvaluationUpdate(EvaluationBase):
     pass
 
-class Evaluation(EvaluationBase):
+class Evaluation(EvaluationBase, TimestampMixin):
     id: int
     owner_id: int
-    project_id: Optional[int]
+    project_id: Optional[int] = None
     model_id: int
     dataset_id: int
-    training_id: Optional[int]
-    predictions_path: Optional[str]
-    confusion_matrix: Optional[Dict[str, Any]]
-    feature_importance: Optional[Dict[str, Any]]
-    execution_time: Optional[float]
-    accuracy: Optional[float]
-    precision: Optional[float]
-    recall: Optional[float]
-    f1_score: Optional[float]
-    created_at: datetime
-    updated_at: datetime
+    training_id: Optional[int] = None
+    predictions_path: Optional[str] = None
+    confusion_matrix: Optional[Dict[str, Any]] = None
+    feature_importance: Optional[Dict[str, Any]] = None
+    execution_time: Optional[float] = None
+    accuracy: Optional[float] = None
+    precision: Optional[float] = None
+    recall: Optional[float] = None
+    f1_score: Optional[float] = None
 
     class Config:
         from_attributes = True
-
-class EvaluationWithRelations(Evaluation):
-    model: Model
-    dataset: Dataset
-    training: Optional[Training]
-
-# Common response models
-class Message(BaseModel):
-    message: str
-
-class ErrorResponse(BaseModel):
-    detail: str
-
-class PaginatedResponse(BaseModel):
-    total: int
-    page: int
-    page_size: int
-    items: List[Any]
