@@ -11,7 +11,7 @@ from app.services.auth.jwt import create_access_token
 from app.services.auth.security import get_password_hash, verify_password
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, User
-from app.crud.crud_user import user_crud
+
 
 router = APIRouter()
 
