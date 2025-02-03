@@ -4,8 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from enum import Enum
 
-from .model import Model
-from .dataset import Dataset
+from .base import TimestampMixin
 
 class TrainingStatus(str, Enum):
     QUEUED = "queued"
@@ -26,7 +25,7 @@ class TrainingUpdate(BaseModel):
     status: Optional[TrainingStatus] = None
     hyperparameters: Optional[Dict[str, Any]] = None
 
-class Training(TrainingBase):
+class Training(TrainingBase, TimestampMixin):
     id: int
     owner_id: int
     project_id: Optional[int] = None
@@ -41,12 +40,6 @@ class Training(TrainingBase):
     cpu_usage: Optional[float] = None
     memory_usage: Optional[float] = None
     gpu_usage: Optional[float] = None
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
-
-class TrainingWithRelations(Training):
-    model: Model
-    dataset: Dataset

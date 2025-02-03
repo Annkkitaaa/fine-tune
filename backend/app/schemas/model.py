@@ -1,6 +1,8 @@
+# app/schemas/model.py
 from typing import Optional, Dict, Any
-from datetime import datetime
 from pydantic import BaseModel
+
+from .base import TimestampMixin
 
 class ModelBase(BaseModel):
     name: str
@@ -17,15 +19,13 @@ class ModelCreate(ModelBase):
 class ModelUpdate(ModelBase):
     pass
 
-class Model(ModelBase):
+class Model(ModelBase, TimestampMixin):
     id: int
     owner_id: int
     project_id: Optional[int] = None
     metrics: Optional[Dict[str, Any]] = None
     size: Optional[float] = None
     is_default: bool = False
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
