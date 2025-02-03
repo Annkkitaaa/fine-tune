@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, validator
 from datetime import datetime
+from pydantic import BaseModel
 
 class ModelBase(BaseModel):
     name: str
@@ -12,12 +12,7 @@ class ModelBase(BaseModel):
     hyperparameters: Optional[Dict[str, Any]] = None
 
 class ModelCreate(ModelBase):
-    @validator('framework')
-    def validate_framework(cls, v):
-        allowed_frameworks = {'pytorch', 'tensorflow', 'scikit-learn'}
-        if v not in allowed_frameworks:
-            raise ValueError(f'Framework must be one of {allowed_frameworks}')
-        return v
+    pass
 
 class ModelUpdate(ModelBase):
     pass
@@ -25,10 +20,10 @@ class ModelUpdate(ModelBase):
 class Model(ModelBase):
     id: int
     owner_id: int
-    project_id: Optional[int]
-    metrics: Optional[Dict[str, Any]]
-    size: Optional[float]
-    is_default: bool
+    project_id: Optional[int] = None
+    metrics: Optional[Dict[str, Any]] = None
+    size: Optional[float] = None
+    is_default: bool = False
     created_at: datetime
     updated_at: datetime
 

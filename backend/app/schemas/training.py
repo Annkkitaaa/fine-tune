@@ -1,7 +1,11 @@
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel
+# app/schemas/training.py
+from typing import Optional, Dict, Any
 from datetime import datetime
+from pydantic import BaseModel
 from enum import Enum
+
+from .model import Model
+from .dataset import Dataset
 
 class TrainingStatus(str, Enum):
     QUEUED = "queued"
@@ -19,24 +23,24 @@ class TrainingCreate(TrainingBase):
     pass
 
 class TrainingUpdate(BaseModel):
-    status: Optional[TrainingStatus]
-    hyperparameters: Optional[Dict[str, Any]]
+    status: Optional[TrainingStatus] = None
+    hyperparameters: Optional[Dict[str, Any]] = None
 
 class Training(TrainingBase):
     id: int
     owner_id: int
-    project_id: Optional[int]
+    project_id: Optional[int] = None
     status: TrainingStatus
-    start_time: Optional[str]
-    end_time: Optional[str]
-    duration: Optional[float]
-    epochs_completed: Optional[int]
-    training_logs: Optional[Dict[str, Any]]
-    metrics: Optional[Dict[str, Any]]
-    error_message: Optional[str]
-    cpu_usage: Optional[float]
-    memory_usage: Optional[float]
-    gpu_usage: Optional[float]
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration: Optional[float] = None
+    epochs_completed: Optional[int] = None
+    training_logs: Optional[Dict[str, Any]] = None
+    metrics: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    cpu_usage: Optional[float] = None
+    memory_usage: Optional[float] = None
+    gpu_usage: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 

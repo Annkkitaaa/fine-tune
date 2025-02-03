@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
-from pydantic import BaseModel, validator
 from datetime import datetime
+from pydantic import BaseModel
 
 class DatasetBase(BaseModel):
     name: str
@@ -9,12 +9,7 @@ class DatasetBase(BaseModel):
     preprocessing_config: Optional[Dict[str, Any]] = None
 
 class DatasetCreate(DatasetBase):
-    @validator('format')
-    def validate_format(cls, v):
-        allowed_formats = {'csv', 'json', 'parquet', 'xlsx'}
-        if v not in allowed_formats:
-            raise ValueError(f'Format must be one of {allowed_formats}')
-        return v
+    pass
 
 class DatasetUpdate(DatasetBase):
     pass
@@ -22,12 +17,12 @@ class DatasetUpdate(DatasetBase):
 class Dataset(DatasetBase):
     id: int
     owner_id: int
-    project_id: Optional[int]
+    project_id: Optional[int] = None
     file_path: str
-    size: Optional[float]
-    num_rows: Optional[int]
-    num_features: Optional[int]
-    metadata: Optional[Dict[str, Any]]
+    size: Optional[float] = None
+    num_rows: Optional[int] = None
+    num_features: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
 
