@@ -1,3 +1,4 @@
+# app/schemas/dataset.py
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from .base import TimestampMixin
@@ -22,7 +23,7 @@ class Dataset(DatasetBase, TimestampMixin):
     size: Optional[float] = None
     num_rows: Optional[int] = None
     num_features: Optional[int] = None
-    metadata: Optional[Dict[str, Any]] = None
+    meta_info: Optional[Dict[str, Any]] = None  # Changed from metadata to meta_info
 
     class Config:
         from_attributes = True
