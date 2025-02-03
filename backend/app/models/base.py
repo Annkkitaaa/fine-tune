@@ -1,13 +1,14 @@
 # app/models/base.py
 from datetime import datetime
-from sqlalchemy import Column, Integer, DateTime
-from app.db.base import Base
+from typing import Any
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import DateTime
 
-class BaseModel(Base):
-    """Base model class that all other models will inherit from"""
+class Base(DeclarativeBase):
+    """Base class for all database models"""
     
     __abstract__ = True
 
-    id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
