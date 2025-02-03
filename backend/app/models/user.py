@@ -1,6 +1,6 @@
 # app/models/user.py
 from typing import Optional, List
-from sqlalchemy import String, Boolean
+from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -18,7 +18,7 @@ class User(Base):
     # Relationships
     projects: Mapped[List["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     datasets: Mapped[List["Dataset"]] = relationship("Dataset", back_populates="owner", cascade="all, delete-orphan")
-    models: Mapped[List["Model"]] = relationship("Model", back_populates="owner", cascade="all, delete-orphan")
+    models: Mapped[List["MLModel"]] = relationship("MLModel", back_populates="owner", cascade="all, delete-orphan")  # Updated to MLModel
     trainings: Mapped[List["Training"]] = relationship("Training", back_populates="owner", cascade="all, delete-orphan")
     evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="owner", cascade="all, delete-orphan")
 
