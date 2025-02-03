@@ -1,4 +1,3 @@
-# session.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -7,7 +6,7 @@ from app.core.config import settings
 
 # Create database engine
 engine = create_engine(
-    settings.SQLALCHEMY_DATABASE_URI,
+    settings.DATABASE_URL,
     poolclass=QueuePool,
     pool_size=5,
     max_overflow=10,
