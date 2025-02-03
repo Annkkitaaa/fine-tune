@@ -1,3 +1,4 @@
+# app/db/session.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -6,7 +7,7 @@ from app.core.config import settings
 
 # Create database engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    str(settings.DATABASE_URL),  # Convert to string explicitly
     poolclass=QueuePool,
     pool_size=5,
     max_overflow=10,
@@ -17,3 +18,6 @@ engine = create_engine(
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Export what we need
+__all__ = ["engine", "SessionLocal"]
