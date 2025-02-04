@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
-
+    
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str):
@@ -19,19 +19,19 @@ class Settings(BaseSettings):
                 return ["*"]
             return [i.strip() for i in v.split(",")]
         return v or []
-
+    
     # JWT Configuration
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-
+    
     # Database Configuration
     DATABASE_URL: str
-
+    
     # File Storage Configuration
     UPLOAD_FOLDER: str = "uploads"
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024  # 16MB max file size
-
+    
     # ML Model Configuration
     SUPPORTED_FRAMEWORKS: List[str] = ["pytorch", "tensorflow", "scikit-learn"]
     DEFAULT_BATCH_SIZE: int = 32
@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     # Training Configuration
     MAX_CONCURRENT_TRAININGS: int = 5
     TRAINING_TIMEOUT: int = 3600  # 1 hour
+    
+    # TensorFlow Configuration
+    TF_CPP_MIN_LOG_LEVEL: str = "2"  # Reduce TF logging
+    TF_FORCE_GPU_ALLOW_GROWTH: str = "true"
+    CUDA_VISIBLE_DEVICES: str = "-1"  # Disable GPU
+    TF_NUM_INTEROP_THREADS: int = 1
+    TF_NUM_INTRAOP_THREADS: int = 1
+    MALLOC_ARENA_MAX: int = 2
     
     model_config = SettingsConfigDict(
         env_file=".env",
