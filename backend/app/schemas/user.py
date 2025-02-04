@@ -6,9 +6,9 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     is_active: bool = True
-    is_superuser: bool = False
 
 class UserCreate(UserBase):
+    email: EmailStr
     password: str
 
 class UserUpdate(UserBase):
@@ -16,6 +16,7 @@ class UserUpdate(UserBase):
 
 class User(UserBase, TimestampMixin):
     id: int
+    is_superuser: bool
 
     class Config:
         from_attributes = True
