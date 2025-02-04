@@ -1,60 +1,57 @@
-from typing import Any
+# app/api/v1/deployment.py
+from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.schemas.deployment import DeploymentCreate, Deployment
-from app.services.deployment.deployer import deploy_model
 from app.models.deployment import Deployment as DeploymentModel
 
 router = APIRouter()
 
-@router.post("/deploy", response_model=Deployment)
-async def deploy(
+@router.post("/create", response_model=Deployment)
+def create_deployment(
     *,
     db: Session = Depends(get_db),
     current_user: Any = Depends(get_current_user),
     deployment_in: DeploymentCreate
 ) -> Any:
     """
-    Deploy trained model.
+    Create new deployment.
     """
-    # Deploy model
-    deployment_config = await deploy_model(
-        model_id=deployment_in.model_id,
-        deployment_type=deployment_in.type
-    )
-    
-    # Create deployment record
-    deployment = DeploymentModel(
-        model_id=deployment_in.model_id,
-        type=deployment_in.type,
-        config=deployment_config,
-        status="active",
-        owner_id=current_user.id
-    )
-    db.add(deployment)
-    db.commit()
-    db.refresh(deployment)
-    return deployment
+    try:
+        deployment = DeploymentModel(
+            name=deployment_in.name,
+            description=deployment_in.description,
+            model_id=deployment_in.model_id,
+            config=deployment_in.config,
+            status="pending",
+            owner_id=current_user.id
+        )
+        
+        db.add(deployment)
+        db.commit()
+        db.refresh(deployment)
+        return deployment
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error creating deployment: {str(e)}"
+        )
 
-@router.delete("/{deployment_id}")
-async def undeploy(
-    deployment_id: int,
+@router.get("/list", response_model=List[Deployment])
+def list_deployments(
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 100
 ) -> Any:
     """
-    Undeploy model.
+    Retrieve deployments.
     """
-    deployment = db.query(DeploymentModel).filter(
-        DeploymentModel.id == deployment_id,
+    deployments = db.query(DeploymentModel).filter(
         DeploymentModel.owner_id == current_user.id
-    ).first()
-    if not deployment:
-        raise HTTPException(404, "Deployment not found")
-    
-    # Update status
-    deployment.status = "inactive"
-    db.commit()
-    return {"message": "Model undeployed successfully"}
+    ).offset(skip).limit(limit).all()
+    return deployments
