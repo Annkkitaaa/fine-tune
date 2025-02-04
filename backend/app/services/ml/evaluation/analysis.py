@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Union, Any
 import numpy as np
 import pandas as pd
-from sklearn.metrics import precision_recall_curve, roc_curve
+from sklearn.metrics import precision_recall_curve, roc_curve, confusion_matrix 
 import logging
 from pathlib import Path
 import json
