@@ -5,25 +5,27 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.schemas.model import MLModelCreate, MLModel
 from app.services.ml.training import PyTorchTrainer, TensorFlowTrainer, SklearnTrainer
-from app.models.model import MLModel
+from app.models.model import MLModel as MLModelDB
 
 router = APIRouter()
 
-def initialize_trainer(architecture: str, model_config: dict = None, training_config: dict = None):
-    """Initialize appropriate trainer based on architecture"""
-    model_config = model_config or {}
-    training_config = training_config or {}
+def initialize_trainer(framework: str, config: dict = None):
+    """Initialize appropriate trainer based on framework"""
+    config = config or {}
     
-    if architecture == "pytorch":
-        return PyTorchTrainer(model_config=model_config, training_config=training_config)
-    elif architecture == "tensorflow":
-        return TensorFlowTrainer(model_config=model_config, training_config=training_config)
-    elif architecture == "sklearn":
-        return SklearnTrainer(model_config=model_config, training_config=training_config)
+    if framework == "pytorch":
+        return PyTorchTrainer(model_config=config.get('model_config', {}), 
+                            training_config=config.get('training_config', {}))
+    elif framework == "tensorflow":
+        return TensorFlowTrainer(model_config=config.get('model_config', {}), 
+                               training_config=config.get('training_config', {}))
+    elif framework == "sklearn":
+        return SklearnTrainer(model_config=config.get('model_config', {}), 
+                            training_config=config.get('training_config', {}))
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported model architecture: {architecture}"
+            detail=f"Unsupported framework: {framework}"
         )
 
 @router.post("/create", response_model=MLModel)
@@ -39,19 +41,22 @@ def create_model(
     try:
         # Initialize trainer with configurations
         trainer = initialize_trainer(
-            architecture=model_in.architecture,
-            model_config=getattr(model_in, 'model_config', {}),
-            training_config=getattr(model_in, 'training_config', {})
+            framework=model_in.framework,
+            config=model_in.config
         )
         
         # Create model record
-        model = MLModel(
+        model = MLModelDB(
             name=model_in.name,
+            description=model_in.description,
+            framework=model_in.framework,
             architecture=model_in.architecture,
-            model_config=trainer.model_config,
-            training_config=trainer.training_config,
+            version=model_in.version,
+            config=model_in.config,
+            hyperparameters=model_in.hyperparameters,
             owner_id=current_user.id
         )
+        
         db.add(model)
         db.commit()
         db.refresh(model)
@@ -74,7 +79,7 @@ def list_models(
     """
     Retrieve models.
     """
-    models = db.query(MLModel).filter(
-        MLModel.owner_id == current_user.id
+    models = db.query(MLModelDB).filter(
+        MLModelDB.owner_id == current_user.id
     ).offset(skip).limit(limit).all()
     return models
