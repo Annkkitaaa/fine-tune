@@ -9,7 +9,6 @@ from app.core.security import get_password_hash, verify_password
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
