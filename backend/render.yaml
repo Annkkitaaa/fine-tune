@@ -11,21 +11,15 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: production
-      # TensorFlow memory optimization
+      # Memory optimization settings
       - key: TF_CPP_MIN_LOG_LEVEL
         value: "2"
-      - key: TF_FORCE_GPU_ALLOW_GROWTH
-        value: "true"
-      - key: CUDA_VISIBLE_DEVICES
-        value: "-1"
-      - key: TF_NUM_INTEROP_THREADS
-        value: "1"
-      - key: TF_NUM_INTRAOP_THREADS
-        value: "1"
       - key: MALLOC_ARENA_MAX
         value: "2"
-      # Memory limits for Python
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: PYTHONHASHSEED
-        value: "0"
+      # Disable TensorFlow GPU and optimize memory
+      - key: CUDA_VISIBLE_DEVICES
+        value: "-1"
+      - key: TF_FORCE_GPU_ALLOW_GROWTH
+        value: "true"
+      - key: TF_KERAS_BACKEND
+        value: "tensorflow"

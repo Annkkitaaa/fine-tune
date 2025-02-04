@@ -8,12 +8,17 @@ from app.api.v1 import api_router
 from app.core.events import create_start_app_handler, create_stop_app_handler
 
 # Configure environment variables for TensorFlow
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = settings.TF_CPP_MIN_LOG_LEVEL
-os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = settings.TF_FORCE_GPU_ALLOW_GROWTH
-os.environ['CUDA_VISIBLE_DEVICES'] = settings.CUDA_VISIBLE_DEVICES
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 os.environ['TF_NUM_INTEROP_THREADS'] = str(settings.TF_NUM_INTEROP_THREADS)
 os.environ['TF_NUM_INTRAOP_THREADS'] = str(settings.TF_NUM_INTRAOP_THREADS)
-os.environ['MALLOC_ARENA_MAX'] = str(settings.MALLOC_ARENA_MAX)
+os.environ['MALLOC_ARENA_MAX'] = '2'
+
+import tensorflow as tf
+# Configure TF for minimal memory usage
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
 
 def create_application() -> FastAPI:
     application = FastAPI(
