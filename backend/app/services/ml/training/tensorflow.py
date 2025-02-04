@@ -9,6 +9,16 @@ import json
 
 logger = logging.getLogger(__name__)
 
+# Limit TensorFlow memory growth
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
+# Limit CPU memory usage
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
+
 class TensorFlowTrainer:
     def __init__(self, model_config: Dict[str, Any], training_config: Dict[str, Any]):
         self.model_config = model_config
