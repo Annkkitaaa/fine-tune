@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.schemas.dataset import DatasetCreate, Dataset
-from app.services.data.preprocessing import process_dataset
+from app.services.data.preprocessing import DataPreprocessor
 from app.models.dataset import Dataset as DatasetModel
 
 router = APIRouter()
@@ -25,7 +25,7 @@ async def upload_dataset(
         raise HTTPException(400, "Invalid file format")
     
     # Process dataset
-    processed_data = await process_dataset(file)
+    processed_data = await DataPreprocessor.process_dataset(file)
     
     # Create dataset record
     dataset = DatasetModel(
