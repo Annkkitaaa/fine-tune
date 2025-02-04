@@ -5,6 +5,8 @@ from sklearn.metrics import precision_recall_curve, roc_curve, confusion_matrix
 import logging
 from pathlib import Path
 import json
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
 
