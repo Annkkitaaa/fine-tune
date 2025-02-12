@@ -1,8 +1,10 @@
-import { useState } from 'react';
+// src/pages/auth/Register.tsx
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Mail, Lock, User } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
+import { useRegister } from '@/hooks/useAuth';
 
 interface RegisterForm {
   name: string;
@@ -11,14 +13,15 @@ interface RegisterForm {
 }
 
 export function Register() {
-  const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>();
+  const register = useRegister();
+  const { register: registerField, handleSubmit, formState: { errors } } = useForm<RegisterForm>();
 
-  const onSubmit = async (data: RegisterForm) => {
-    setIsLoading(true);
-    // TODO: Implement registration logic
-    console.log(data);
-    setIsLoading(false);
+  const onSubmit = (data: RegisterForm) => {
+    register.mutate({
+      email: data.email,
+      password: data.password,
+      full_name: data.name,
+    });
   };
 
   return (
@@ -33,12 +36,18 @@ export function Register() {
           </p>
         </div>
 
+        {register.error && (
+          <Alert variant="destructive">
+            {register.error.message}
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <div className="relative">
               <User className="absolute left-3 top-2.5 h-5 w-5 text-tertiary" />
               <input
-                {...register('name', { required: 'Name is required' })}
+                {...registerField('name', { required: 'Name is required' })}
                 className="w-full rounded-md border border-secondary-light bg-transparent py-2 pl-10 pr-3 text-sm placeholder:text-tertiary focus:border-primary-dark focus:outline-none focus:ring-1 focus:ring-primary-dark dark:border-secondary-dark dark:focus:border-primary-light dark:focus:ring-primary-light"
                 placeholder="Full Name"
               />
@@ -52,7 +61,7 @@ export function Register() {
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 h-5 w-5 text-tertiary" />
               <input
-                {...register('email', {
+                {...registerField('email', {
                   required: 'Email is required',
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -72,7 +81,7 @@ export function Register() {
             <div className="relative">
               <Lock className="absolute left-3 top-2.5 h-5 w-5 text-tertiary" />
               <input
-                {...register('password', {
+                {...registerField('password', {
                   required: 'Password is required',
                   minLength: {
                     value: 8,
@@ -92,9 +101,9 @@ export function Register() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading}
+            disabled={register.isPending}
           >
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {register.isPending ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>
 

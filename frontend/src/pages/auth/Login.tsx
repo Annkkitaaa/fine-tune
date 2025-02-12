@@ -1,8 +1,10 @@
-import { useState } from 'react';
+// src/pages/auth/Login.tsx
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Mail, Lock } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
+import { useLogin } from '@/hooks/useAuth';
 
 interface LoginForm {
   email: string;
@@ -10,16 +12,23 @@ interface LoginForm {
 }
 
 export function Login() {
-  const [isLoading, setIsLoading] = useState(false);
+  const login = useLogin();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
 
   const onSubmit = async (data: LoginForm) => {
-    setIsLoading(true);
-    // TODO: Implement login logic
-    console.log(data);
-    setIsLoading(false);
+    try {
+      await login.mutateAsync(data);
+    } catch (error) {
+      console.error('Login submission error:', error);
+    }
   };
 
+  console.log('Login mutation state:', {
+    isLoading: login.isPending,
+    error: login.error,
+    isSuccess: login.isSuccess
+  });
+  
   return (
     <div className="rounded-lg bg-white/80 p-8 shadow-lg backdrop-blur-sm dark:bg-primary-dark/80">
       <div className="space-y-6">
@@ -31,6 +40,12 @@ export function Login() {
             Sign in to your account
           </p>
         </div>
+
+        {login.error && (
+          <Alert variant="destructive">
+            {login.error.message}
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -73,9 +88,9 @@ export function Login() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading}
+            disabled={login.isPending}
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {login.isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
 
