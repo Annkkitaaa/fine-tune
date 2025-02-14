@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import Column, Boolean, String, Integer, DateTime, event
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -29,7 +28,8 @@ class User(Base):
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    last_login = Column(DateTime(timezone=True))
     
     # Relationships
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
@@ -39,26 +39,24 @@ class User(Base):
     evaluations = relationship("Evaluation", back_populates="owner", cascade="all, delete-orphan")
     deployments = relationship("Deployment", back_populates="owner", cascade="all, delete-orphan")
 
-    def __repr__(self):
-        return f"<User {self.email}>"
-
     def verify_password(self, password: str) -> bool:
-        """Verify a plain password against hashed password"""
         return verify_password(password, self.hashed_password)
 
     def set_password(self, password: str) -> None:
-        """Set a new password"""
         self.hashed_password = get_password_hash(password)
 
-# SQLAlchemy event listeners
+    def update_last_login(self) -> None:
+        self.last_login = datetime.utcnow()
+
+    def __repr__(self):
+        return f"<User {self.email}>"
+
 @event.listens_for(User, 'before_insert')
 def user_before_insert(mapper, connection, target):
-    """Ensure email is lowercase before insert"""
     if target.email:
         target.email = target.email.lower()
 
 @event.listens_for(User, 'before_update')
 def user_before_update(mapper, connection, target):
-    """Ensure email is lowercase before update"""
     if target.email:
         target.email = target.email.lower()

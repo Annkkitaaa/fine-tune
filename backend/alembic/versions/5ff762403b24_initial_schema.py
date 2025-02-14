@@ -1,8 +1,8 @@
-"""initial
+"""initial schema
 
-Revision ID: 28412b9b4558
+Revision ID: 5ff762403b24
 Revises: 
-Create Date: 2025-02-14 22:05:08.288366
+Create Date: 2025-02-15 02:03:39.991414
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '28412b9b4558'
+revision: str = '5ff762403b24'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,7 +28,8 @@ def upgrade() -> None:
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('is_superuser', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('last_login', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -67,22 +68,22 @@ def upgrade() -> None:
     op.create_index(op.f('ix_datasets_id'), 'datasets', ['id'], unique=False)
     op.create_table('models',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.String(length=1000), nullable=True),
-    sa.Column('framework', sa.String(length=50), nullable=False),
-    sa.Column('architecture', sa.String(length=50), nullable=False),
-    sa.Column('version', sa.String(length=20), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('framework', sa.String(), nullable=False),
+    sa.Column('architecture', sa.String(), nullable=False),
+    sa.Column('version', sa.String(), nullable=True),
     sa.Column('config', sa.JSON(), nullable=True),
     sa.Column('hyperparameters', sa.JSON(), nullable=True),
+    sa.Column('metrics', sa.JSON(), nullable=True),
+    sa.Column('file_path', sa.String(), nullable=True),
+    sa.Column('preprocessor_path', sa.String(), nullable=True),
+    sa.Column('size', sa.Integer(), nullable=True),
+    sa.Column('is_default', sa.Boolean(), nullable=True),
     sa.Column('owner_id', sa.Integer(), nullable=False),
     sa.Column('project_id', sa.Integer(), nullable=True),
-    sa.Column('file_path', sa.String(length=255), nullable=True),
-    sa.Column('preprocessor_path', sa.String(length=255), nullable=True),
-    sa.Column('size', sa.Integer(), nullable=True),
-    sa.Column('metrics', sa.JSON(), nullable=True),
-    sa.Column('is_default', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
