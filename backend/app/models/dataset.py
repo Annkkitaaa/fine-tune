@@ -1,29 +1,43 @@
 # app/models/dataset.py
-from typing import Optional, List
-from sqlalchemy import String, ForeignKey, JSON, Float, Integer
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
+
+if TYPE_CHECKING:
+    from .user import User
+    from .project import Project
+    from .training import Training
+    from .evaluation import Evaluation  # ✅ Added missing import
 
 class Dataset(Base):
     __tablename__ = "datasets"
 
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    file_path: Mapped[str] = mapped_column(String, nullable=False)
-    format: Mapped[str] = mapped_column(String, nullable=False)  # csv, json, etc
-    size: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # in MB
-    num_rows: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    num_features: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    meta_info: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Changed from metadata to meta_info
-    preprocessing_config: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+    format = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    size = Column(Integer)
+    num_rows = Column(Integer)
+    num_features = Column(Integer)
+    preprocessing_config = Column(JSON)
+    meta_info = Column(JSON)
     
     # Foreign Keys
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    project_id: Mapped[Optional[int]] = mapped_column(ForeignKey("projects.id"), nullable=True)
-
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
     # Relationships
-    owner: Mapped["User"] = relationship("User", back_populates="datasets")
-    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="datasets")
-    trainings: Mapped[List["Training"]] = relationship("Training", back_populates="dataset")
-    evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="dataset")
+    owner = relationship("User", back_populates="datasets")
+    project = relationship("Project", back_populates="datasets")
+    trainings = relationship("Training", back_populates="dataset")
+
+    # ✅ Added missing relationship
+    evaluations = relationship("Evaluation", back_populates="dataset", cascade="all, delete-orphan")

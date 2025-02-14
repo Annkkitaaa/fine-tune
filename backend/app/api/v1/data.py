@@ -1,80 +1,79 @@
 # app/api/v1/data.py
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from typing import Any, List
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-import json
-from typing import Any
-from typing import List
+import os
 
 from app.api.deps import get_current_user, get_db
-from app.schemas.dataset import DatasetCreate, Dataset
-from app.models.dataset import Dataset as DatasetModel
 from app.core.config import settings
-import os
+from app.models.user import User
+from app.models.dataset import Dataset as DatasetModel
+from app.schemas.dataset import Dataset, DatasetCreate  # Updated import
 
 router = APIRouter()
 
-@router.post("/upload", response_model=Dataset)
-async def upload_dataset(
-    *,
-    db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
+@router.post("/upload")
+async def upload_data(
     file: UploadFile = File(...),
-    dataset_info: str = Form(...)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Any:
-    """
-    Upload new dataset.
-    """
+    """Upload a dataset file."""
     try:
-        # Parse dataset_info from string to dict
-        dataset_info = json.loads(dataset_info)
-        dataset_create = DatasetCreate(**dataset_info)
+        # Check file extension
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in settings.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type not allowed. Allowed types: {settings.ALLOWED_EXTENSIONS}"
+            )
 
-        # Validate file format
-        if not file.filename.endswith(('.csv', '.json', '.parquet')):
-            raise HTTPException(400, "Invalid file format")
-
-        # Create uploads directory if it doesn't exist
-        upload_dir = os.path.join(settings.UPLOAD_FOLDER, str(current_user.id))
-        os.makedirs(upload_dir, exist_ok=True)
+        # Create user upload directory if it doesn't exist
+        user_upload_dir = os.path.join(settings.UPLOAD_FOLDER, str(current_user.id))
+        os.makedirs(user_upload_dir, exist_ok=True)
 
         # Save file
-        file_path = os.path.join(upload_dir, file.filename)
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
+        file_path = os.path.join(user_upload_dir, file.filename)
+        with open(file_path, "wb+") as file_object:
+            file_object.write(await file.read())
 
         # Create dataset record
         dataset = DatasetModel(
-            name=dataset_create.name,
-            description=dataset_create.description,
-            format=dataset_create.format,
+            name=file.filename,
             file_path=file_path,
-            owner_id=current_user.id,
-            size=len(content) / (1024 * 1024)  # size in MB
+            format=file_ext.lstrip('.'),
+            owner_id=current_user.id
         )
-
+        
         db.add(dataset)
         db.commit()
         db.refresh(dataset)
 
-        return dataset
-
-    except json.JSONDecodeError:
-        raise HTTPException(400, "Invalid dataset_info JSON format")
+        return {
+            "filename": file.filename,
+            "id": dataset.id,
+            "format": dataset.format,
+            "message": "File uploaded successfully"
+        }
+        
     except Exception as e:
-        raise HTTPException(500, f"Error uploading dataset: {str(e)}")
-
+        # Cleanup if file was saved but database operation failed
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
+            
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error uploading file: {str(e)}"
+        )
 
 @router.get("/list", response_model=List[Dataset])
-def list_datasets(
+async def list_datasets(
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
-    """
-    Retrieve datasets.
-    """
+    """Retrieve datasets."""
     try:
         datasets = (
             db.query(DatasetModel)
@@ -88,4 +87,60 @@ def list_datasets(
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving datasets: {str(e)}"
+        )
+
+@router.get("/{dataset_id}", response_model=Dataset)
+async def get_dataset(
+    dataset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Get a specific dataset by ID."""
+    dataset = db.query(DatasetModel).filter(
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
+    ).first()
+    
+    if not dataset:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+    
+    return dataset
+
+@router.delete("/{dataset_id}")
+async def delete_dataset(
+    dataset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Delete a dataset."""
+    dataset = db.query(DatasetModel).filter(
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
+    ).first()
+    
+    if not dataset:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset not found"
+        )
+    
+    try:
+        # Delete file
+        if os.path.exists(dataset.file_path):
+            os.remove(dataset.file_path)
+        
+        # Delete database record
+        db.delete(dataset)
+        db.commit()
+        
+        return {"message": "Dataset deleted successfully"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting dataset: {str(e)}"
         )

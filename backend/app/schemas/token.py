@@ -7,8 +7,10 @@ class Token(BaseModel):
     token_type: str
 
 class TokenPayload(BaseModel):
-    sub: Optional[str] = None
-    exp: Optional[int] = None
+    sub: str  # user_id
+    exp: Optional[int] = None  # expiration time
+    type: str = "access"  # token type
+    jti: Optional[str] = None  # unique token identifier
 
 class TokenData(BaseModel):
     username: Optional[str] = None

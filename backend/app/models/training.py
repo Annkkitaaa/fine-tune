@@ -1,45 +1,49 @@
 # app/models/training.py
-from typing import Optional, List
-from sqlalchemy import String, ForeignKey, JSON, Float, Integer, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-import enum
+from typing import TYPE_CHECKING
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Float
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
-class TrainingStatus(str, enum.Enum):
-    QUEUED = "queued"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    STOPPED = "stopped"
+if TYPE_CHECKING:
+    from .user import User
+    from .project import Project
+    from .dataset import Dataset
+    from .model import MLModel
+    from .evaluation import Evaluation
 
 class Training(Base):
-    __tablename__ = "trainings"  # Added tablename
+    __tablename__ = "trainings"
 
-    status: Mapped[TrainingStatus] = mapped_column(Enum(TrainingStatus), nullable=False, default=TrainingStatus.QUEUED)
-    start_time: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    end_time: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    duration: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # in seconds
-    epochs_completed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    hyperparameters: Mapped[dict] = mapped_column(JSON, nullable=False)
-    training_logs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    metrics: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-
-    # Resource utilization
-    cpu_usage: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    memory_usage: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    gpu_usage: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-
+    id = Column(Integer, primary_key=True, index=True)
+    status = Column(String, nullable=False)
+    hyperparameters = Column(JSON)
+    metrics = Column(JSON)
+    
+    # Resource Usage
+    cpu_usage = Column(Float)
+    memory_usage = Column(Float)
+    gpu_usage = Column(Float)
+    
     # Foreign Keys
-    model_id: Mapped[int] = mapped_column(ForeignKey("models.id"), nullable=False)  # Updated to match MLModel table name
-    dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    project_id: Mapped[Optional[int]] = mapped_column(ForeignKey("projects.id"), nullable=True)
-
+    model_id = Column(Integer, ForeignKey("models.id", ondelete="CASCADE"))
+    dataset_id = Column(Integer, ForeignKey("datasets.id", ondelete="CASCADE"))
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    start_time = Column(DateTime(timezone=True))
+    end_time = Column(DateTime(timezone=True))
+    
+    # Error tracking
+    error_message = Column(String)
+    
     # Relationships
-    owner: Mapped["User"] = relationship("User", back_populates="trainings")
-    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="trainings")
-    model: Mapped["MLModel"] = relationship("MLModel", back_populates="trainings")  # Updated to MLModel
-    dataset: Mapped["Dataset"] = relationship("Dataset", back_populates="trainings")
-    evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="training")
+    owner = relationship("User", back_populates="trainings")
+    model = relationship("MLModel", back_populates="trainings")
+    dataset = relationship("Dataset", back_populates="trainings")
+    project = relationship("Project", back_populates="trainings")
+    evaluations = relationship("Evaluation", back_populates="training")

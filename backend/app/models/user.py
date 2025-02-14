@@ -1,8 +1,8 @@
 # app/models/user.py
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
-from sqlalchemy import Boolean, String, Integer, DateTime, event
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Column, Boolean, String, Integer, DateTime, event
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 
@@ -18,136 +18,37 @@ if TYPE_CHECKING:
     from .deployment import Deployment
 
 class User(Base):
-    """
-    User model with enhanced security and tracking features
-    """
     __tablename__ = "users"
 
-    # Primary Key
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-
-    # Authentication Fields
-    email: Mapped[str] = mapped_column(
-        String(length=255), 
-        unique=True, 
-        index=True, 
-        nullable=False
-    )
-    hashed_password: Mapped[str] = mapped_column(
-        String(length=255), 
-        nullable=False
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
     
-    # Profile Fields
-    full_name: Mapped[Optional[str]] = mapped_column(
-        String(length=255), 
-        nullable=True
-    )
-    avatar_url: Mapped[Optional[str]] = mapped_column(
-        String(length=255), 
-        nullable=True
-    )
-
-    # Status Fields
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, 
-        default=True, 
-        nullable=False
-    )
-    is_superuser: Mapped[bool] = mapped_column(
-        Boolean, 
-        default=False, 
-        nullable=False
-    )
-    email_verified: Mapped[bool] = mapped_column(
-        Boolean, 
-        default=False, 
-        nullable=False
-    )
-
-    # Tracking Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
-        server_default=func.now(), 
-        nullable=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
-        server_default=func.now(), 
-        onupdate=func.now(), 
-        nullable=False
-    )
-    last_login: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), 
-        nullable=True
-    )
-    password_changed_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), 
-        nullable=True
-    )
-
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
     # Relationships
-    projects: Mapped[List["Project"]] = relationship(
-        "Project", 
-        back_populates="owner", 
-        cascade="all, delete-orphan"
-    )
-    datasets: Mapped[List["Dataset"]] = relationship(
-        "Dataset", 
-        back_populates="owner", 
-        cascade="all, delete-orphan"
-    )
-    models: Mapped[List["MLModel"]] = relationship(
-        "MLModel", 
-        back_populates="owner", 
-        cascade="all, delete-orphan"
-    )
-    trainings: Mapped[List["Training"]] = relationship(
-        "Training", 
-        back_populates="owner", 
-        cascade="all, delete-orphan"
-    )
-    evaluations: Mapped[List["Evaluation"]] = relationship(
-        "Evaluation", 
-        back_populates="owner", 
-        cascade="all, delete-orphan"
-    )
-    deployments: Mapped[List["Deployment"]] = relationship(
-        "Deployment",
-        back_populates="owner",
-        cascade="all, delete-orphan"
-    )
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    datasets = relationship("Dataset", back_populates="owner", cascade="all, delete-orphan")
+    models = relationship("MLModel", back_populates="owner", cascade="all, delete-orphan")
+    trainings = relationship("Training", back_populates="owner", cascade="all, delete-orphan")
+    evaluations = relationship("Evaluation", back_populates="owner", cascade="all, delete-orphan")
+    deployments = relationship("Deployment", back_populates="owner", cascade="all, delete-orphan")
 
-    # Properties
-    @hybrid_property
-    def password_age_days(self) -> Optional[int]:
-        """Calculate how old the current password is in days"""
-        if self.password_changed_at:
-            return (datetime.utcnow() - self.password_changed_at).days
-        return None
+    def __repr__(self):
+        return f"<User {self.email}>"
 
-    @hybrid_property
-    def full_name_display(self) -> str:
-        """Return full name if available, otherwise email"""
-        return self.full_name or self.email.split('@')[0]
-
-    # Methods
-    def verify_password(self, plain_password: str) -> bool:
+    def verify_password(self, password: str) -> bool:
         """Verify a plain password against hashed password"""
-        return verify_password(plain_password, self.hashed_password)
+        return verify_password(password, self.hashed_password)
 
     def set_password(self, password: str) -> None:
-        """Set a new password and update the change timestamp"""
+        """Set a new password"""
         self.hashed_password = get_password_hash(password)
-        self.password_changed_at = datetime.utcnow()
-
-    def update_last_login(self) -> None:
-        """Update the last login timestamp"""
-        self.last_login = datetime.utcnow()
-
-    def __repr__(self) -> str:
-        """String representation of the user"""
-        return f"<User {self.email}>"
 
 # SQLAlchemy event listeners
 @event.listens_for(User, 'before_insert')

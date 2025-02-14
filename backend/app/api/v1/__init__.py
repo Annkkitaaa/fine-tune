@@ -8,7 +8,7 @@ from .evaluation import router as evaluation_router
 from .models import router as models_router
 from .pipeline import router as pipeline_router
 from .training import router as training_router
-from .user import router as user_router
+#from .user import router as user_router
 
 api_router = APIRouter()
 
@@ -20,4 +20,4 @@ api_router.include_router(evaluation_router, prefix="/evaluation", tags=["evalua
 api_router.include_router(models_router, prefix="/models", tags=["models"])
 api_router.include_router(pipeline_router, prefix="/pipeline", tags=["pipeline"])
 api_router.include_router(training_router, prefix="/training", tags=["training"])
-api_router.include_router(user_router, prefix="/users", tags=["users"])
+#api_router.include_router(user_router, prefix="/users", tags=["users"])
