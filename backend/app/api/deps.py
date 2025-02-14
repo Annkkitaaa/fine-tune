@@ -49,42 +49,35 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
-# User dependencies
 async def get_current_user(
-    request: Request,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
+    """Get current authenticated user"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
-        # Decode and validate token
         payload = decode_access_token(token)
-        sub = payload.sub
-        if not sub:
-            raise CREDENTIALS_EXCEPTION
-            
-        user = db.query(User).filter(User.id == int(sub)).first()
-        if not user:
-            raise CREDENTIALS_EXCEPTION
-            
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Inactive user"
-            )
-            
-        return user
-        
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
     except JWTError:
-        raise CREDENTIALS_EXCEPTION
+        raise credentials_exception
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
+    return user
 
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """
-    Get current user and verify they are active.
-    """
+    """Get current active user"""
     if not current_user.is_active:
-        raise INACTIVE_USER_EXCEPTION
+        raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 async def get_current_active_superuser(

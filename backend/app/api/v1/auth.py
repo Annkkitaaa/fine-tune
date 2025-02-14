@@ -61,5 +61,5 @@ async def register(
             status_code=400,
             detail="A user with this email already exists.",
         )
-    
+        
     return user_crud.create(db, obj_in=user_in)
