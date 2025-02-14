@@ -9,11 +9,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DataValidationConfig(BaseModel):
-    required_columns: Optional[List[str]]
-    column_types: Optional[Dict[str, str]]
-    value_ranges: Optional[Dict[str, Tuple[float, float]]]
-    unique_columns: Optional[List[str]]
-    max_missing_ratio: float = 0.2
+    required_columns: Dict[str, bool]
+    column_types: Dict[str, str]
+    value_ranges: Dict[str, Dict[str, float]]  # Example: {"feature1": {"min": 0.0, "max": 10.0}}
+    unique_columns: Dict[str, bool]
 
 class DataValidator:
     def __init__(self, config: Optional[DataValidationConfig] = None):

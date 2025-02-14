@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class MLModel(Base):
     """ML Model with version control and metadata"""
-    __tablename__ = "models"  # Table name should be "models", not "ml_models"
+    __tablename__ = "models"
 
     # Primary Key
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -54,7 +54,9 @@ class MLModel(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        onupdate=func.now()
+        server_default=func.now(),  # ✅ Ensure it's not NULL on creation
+        onupdate=func.now(),
+        nullable=False  # ✅ Prevent NULL values
     )
 
     # Relationships
@@ -89,4 +91,3 @@ class MLModel(Base):
         if not self.metrics:
             self.metrics = {}
         self.metrics.update(metrics)
-        self.updated_at = datetime.utcnow()

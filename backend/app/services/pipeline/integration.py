@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class PipelineIntegrationService:
     def __init__(self, config: Optional[Dict] = None):
         self.config = config or {}
-        self.preprocessor = EnhancedPreprocessor(config.get('preprocessing_config'))
-        self.augmenter = DataAugmentationService(config.get('augmentation_config'))
+        self.preprocessor = DataPreprocessor(config.get('preprocessing_config'))
+        self.augmenter = DataAugmenter(config.get('augmentation_config'))
         self.validator = DataValidator(config.get('validation_config'))
         self.analyzer = DataAnalysisService(config.get('analysis_config'))
         
