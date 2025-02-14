@@ -90,9 +90,9 @@ class PyTorchTrainer:
         train_loader: DataLoader,
         val_loader: Optional[DataLoader] = None,
         callbacks: Optional[List[Any]] = None
-    ) -> Dict[str, List[float]]:
+    ) -> Tuple[nn.Module, Dict[str, List[float]]]:
         """
-        Train the PyTorch model
+        Train the PyTorch model and return both model and history
         """
         input_dim = next(iter(train_loader))[0].shape[1]
         output_dim = 1  # Adjust based on your task
@@ -147,7 +147,7 @@ class PyTorchTrainer:
                     for callback in callbacks:
                         callback(epoch, history)
 
-            return history
+            return self.model, history
 
         except Exception as e:
             logger.error(f"Error during training: {str(e)}")

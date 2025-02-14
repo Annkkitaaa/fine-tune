@@ -111,9 +111,9 @@ class SklearnTrainer:
         X_val: Optional[np.ndarray] = None,
         y_val: Optional[np.ndarray] = None,
         feature_names: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+    ) -> Tuple[BaseEstimator, Dict[str, Any]]:
         """
-        Train the scikit-learn model
+        Train the scikit-learn model and return both model and metrics
         """
         try:
             # Initialize and train model
@@ -153,11 +153,13 @@ class SklearnTrainer:
             if self.feature_importance:
                 metrics['feature_importance'] = self.feature_importance
             
-            return metrics
+            # Return both model and metrics
+            return self.model, metrics
             
         except Exception as e:
             logger.error(f"Error during training: {str(e)}")
             raise
+
 
     def evaluate(
         self,

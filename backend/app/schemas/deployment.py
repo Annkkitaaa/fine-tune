@@ -4,9 +4,9 @@ from pydantic import BaseModel
 from datetime import datetime
 
 class DeploymentBase(BaseModel):
-    model_id: int
     name: str
     description: Optional[str] = None
+    model_id: int
     config: Optional[Dict[str, Any]] = None
     endpoint_url: Optional[str] = None
 
@@ -26,6 +26,9 @@ class Deployment(DeploymentBase):
     status: str
     created_at: datetime
     updated_at: Optional[datetime] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    error_message: Optional[str] = None
     metrics: Optional[Dict[str, Any]] = None
 
     class Config:

@@ -1,7 +1,8 @@
-from typing import AsyncGenerator, Optional, cast
+# app/api/deps.py
+from typing import AsyncGenerator, Generator, Optional
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -51,46 +52,28 @@ def get_db() -> Generator[Session, None, None]:
 # User dependencies
 async def get_current_user(
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
-    """
-    Get current authenticated user based on JWT token.
-    Also performs token validation and user active status check.
-    """
     try:
         # Decode and validate token
         payload = decode_access_token(token)
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        sub = payload.sub
+        if not sub:
             raise CREDENTIALS_EXCEPTION
-        
-        # Get token type and validate
-        token_type: str = payload.get("type", "")
-        if token_type != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
-            )
-
-        # Get user from database
-        user = await db.get(User, int(user_id))
-        if user is None:
+            
+        user = db.query(User).filter(User.id == int(sub)).first()
+        if not user:
             raise CREDENTIALS_EXCEPTION
-
-        # Check if user is active
+            
         if not user.is_active:
-            raise INACTIVE_USER_EXCEPTION
-
-        # Update last activity
-        user.last_login = datetime.utcnow()
-        await db.commit()
-
-        # Store user in request state for logging/tracking
-        request.state.user = user
-        
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Inactive user"
+            )
+            
         return user
-
+        
     except JWTError:
         raise CREDENTIALS_EXCEPTION
 
@@ -125,37 +108,6 @@ async def check_rate_limit(request: Request):
     """
     if hasattr(request.app.state, "limiter"):
         await request.app.state.limiter.check(request)
-
-# Permission checking dependencies
-async def check_object_permission(
-    db: AsyncSession,
-    user: User,
-    object_type: str,
-    object_id: int
-) -> bool:
-    """
-    Check if user has permission to access a specific object.
-    """
-    if user.is_superuser:
-        return True
-
-    model_map = {
-        "project": "Project",
-        "dataset": "Dataset",
-        "model": "MLModel",
-        "training": "Training",
-        "evaluation": "Evaluation"
-    }
-
-    if object_type not in model_map:
-        raise ValueError(f"Invalid object type: {object_type}")
-
-    model_class = model_map[object_type]
-    result = await db.execute(
-        f"SELECT 1 FROM {model_class.lower()}s WHERE id = :id AND owner_id = :owner_id",
-        {"id": object_id, "owner_id": user.id}
-    )
-    return result.scalar() is not None
 
 # Request tracking dependency
 async def track_request(request: Request):
@@ -193,28 +145,3 @@ async def get_pagination_params(
         page_size = max_page_size
     
     return page, page_size
-
-async def validate_object_exists(
-    db: AsyncSession,
-    model_class: Any,
-    object_id: int
-) -> Any:
-    """
-    Validate that an object exists and return it.
-    """
-    obj = await db.get(model_class, object_id)
-    if obj is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{model_class.__name__} not found"
-        )
-    return obj
-
-# Cache dependency
-async def get_cache():
-    """
-    Get cache connection for route handlers.
-    """
-    if not hasattr(get_cache, "client"):
-        get_cache.client = await create_cache_client()
-    return get_cache.client

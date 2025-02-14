@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.base_class import Base
 from app.db.session import engine
+from app.db.session import SessionLocal
 
 def init_db() -> None:
     """Initialize the database. Create all tables."""
@@ -11,7 +12,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 def get_db():
-    db = Session(engine)
+    db = SessionLocal()  # Use the correct session here
     try:
         yield db
     finally:

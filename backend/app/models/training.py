@@ -32,7 +32,7 @@ class Training(Base):
     gpu_usage: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Foreign Keys
-    model_id: Mapped[int] = mapped_column(ForeignKey("ml_models.id"), nullable=False)  # Updated to match MLModel table name
+    model_id: Mapped[int] = mapped_column(ForeignKey("models.id"), nullable=False)  # Updated to match MLModel table name
     dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     project_id: Mapped[Optional[int]] = mapped_column(ForeignKey("projects.id"), nullable=True)

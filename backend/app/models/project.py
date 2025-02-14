@@ -15,7 +15,23 @@ class Project(Base):
 
     # Relationships
     owner: Mapped["User"] = relationship("User", back_populates="projects")
-    datasets: Mapped[List["Dataset"]] = relationship("Dataset", back_populates="project", cascade="all, delete-orphan")
-    models: Mapped[List["Model"]] = relationship("Model", back_populates="project", cascade="all, delete-orphan")
-    trainings: Mapped[List["Training"]] = relationship("Training", back_populates="project", cascade="all, delete-orphan")
-    evaluations: Mapped[List["Evaluation"]] = relationship("Evaluation", back_populates="project", cascade="all, delete-orphan")
+    datasets: Mapped[List["Dataset"]] = relationship(
+        "Dataset", 
+        back_populates="project", 
+        cascade="all, delete-orphan"
+    )
+    models: Mapped[List["MLModel"]] = relationship(  # Changed from Model to MLModel
+        "MLModel",  # Changed from Model to MLModel
+        back_populates="project", 
+        cascade="all, delete-orphan"
+    )
+    trainings: Mapped[List["Training"]] = relationship(
+        "Training", 
+        back_populates="project", 
+        cascade="all, delete-orphan"
+    )
+    evaluations: Mapped[List["Evaluation"]] = relationship(
+        "Evaluation", 
+        back_populates="project", 
+        cascade="all, delete-orphan"
+    )

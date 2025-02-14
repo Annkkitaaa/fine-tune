@@ -81,8 +81,8 @@ class TensorFlowTrainer:
         train_dataset: tf.data.Dataset,
         val_dataset: Optional[tf.data.Dataset] = None,
         callbacks: Optional[List[tf.keras.callbacks.Callback]] = None
-    ) -> tf.keras.callbacks.History:
-        """Train the TensorFlow model"""
+    ) -> Tuple[tf.keras.Model, Dict[str, List[float]]]:
+        """Train the TensorFlow model and return both model and history"""
         try:
             input_dim = next(iter(train_dataset))[0].shape[1]
             output_dim = 1  # Adjust based on your task
@@ -98,7 +98,7 @@ class TensorFlowTrainer:
                 ),
                 loss='mse',
                 metrics=['mae'],
-                run_eagerly=False  # Disable eager execution for better memory efficiency
+                run_eagerly=False
             )
 
             # Add memory-efficient callbacks
@@ -119,7 +119,19 @@ class TensorFlowTrainer:
                 verbose=1
             )
 
-            return history
+            # Convert history to dict format
+            history_dict = {
+                "train_loss": history.history['loss'],
+                "train_mae": history.history['mae']
+            }
+            
+            if val_dataset:
+                history_dict.update({
+                    "val_loss": history.history['val_loss'],
+                    "val_mae": history.history['val_mae']
+                })
+
+            return self.model, history_dict
 
         except Exception as e:
             logger.error(f"Error during training: {str(e)}")

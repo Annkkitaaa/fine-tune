@@ -1,0 +1,9 @@
+fastapi
+sqlalchemy
+alembic
+psycopg2-binary
+python-jose
+passlib
+python-multipart
+pydantic-settings
+email-validator

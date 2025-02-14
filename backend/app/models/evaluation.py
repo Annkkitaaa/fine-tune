@@ -1,4 +1,3 @@
-# app/models/evaluation.py
 from typing import Optional
 from sqlalchemy import String, ForeignKey, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,7 +21,7 @@ class Evaluation(Base):
     f1_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Foreign Keys
-    model_id: Mapped[int] = mapped_column(ForeignKey("ml_models.id"), nullable=False)  # Updated to match MLModel table
+    model_id: Mapped[int] = mapped_column(ForeignKey("models.id"), nullable=False)  # Updated to match MLModel table
     dataset_id: Mapped[int] = mapped_column(ForeignKey("datasets.id"), nullable=False)
     training_id: Mapped[Optional[int]] = mapped_column(ForeignKey("trainings.id"), nullable=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

@@ -1,0 +1,13 @@
+Metadata-Version: 2.2
+Name: app
+Version: 1.0.0
+Requires-Dist: fastapi
+Requires-Dist: sqlalchemy
+Requires-Dist: alembic
+Requires-Dist: psycopg2-binary
+Requires-Dist: python-jose
+Requires-Dist: passlib
+Requires-Dist: python-multipart
+Requires-Dist: pydantic-settings
+Requires-Dist: email-validator
+Dynamic: requires-dist

@@ -1,50 +1,41 @@
+# app/core/security.py
 from datetime import datetime, timedelta
 from typing import Any, Union
 from passlib.context import CryptContext
-from jose import jwt
-
-from app.core.config import settings
+from fastapi.security import OAuth2PasswordBearer
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def create_access_token(
-    subject: Union[str, Any], expires_delta: timedelta = None
-) -> str:
-    """
-    Create JWT access token
-    """
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
-    )
-    return encoded_jwt
+# OAuth2 configuration
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login"  # This should match your login endpoint
+)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify plain and hashed passwords
-    """
+    """Verify a plain password against hashed password"""
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """
-    Hash a password
-    """
+    """Hash a password"""
     return pwd_context.hash(password)
 
-def verify_token(token: str) -> dict:
+def is_valid_password(password: str) -> bool:
     """
-    Verify JWT token
+    Validate password strength
+    - At least 8 characters long
+    - Contains at least one uppercase letter
+    - Contains at least one lowercase letter
+    - Contains at least one number
+    - Contains at least one special character
     """
-    try:
-        decoded_token = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
-        return decoded_token if decoded_token["exp"] >= datetime.utcnow().timestamp() else None
-    except jwt.JWTError:
-        return None
+    if len(password) < 8:
+        return False
+    if not any(c.isupper() for c in password):
+        return False
+    if not any(c.islower() for c in password):
+        return False
+    if not any(c.isdigit() for c in password):
+        return False
+    if not any(not c.isalnum() for c in password):
+        return False
+    return True

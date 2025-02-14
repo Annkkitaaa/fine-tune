@@ -1,4 +1,4 @@
 from .metrics import MetricsCalculator
-from .analysis import ModelAnalyzer
+from .analysis import DataAnalysisService
 
-__all__ = ["MetricsCalculator", "ModelAnalyzer"]
+__all__ = ["DataAnalysisService", "MetricsCalculator"]

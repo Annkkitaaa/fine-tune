@@ -1,10 +1,10 @@
+# app/models/user.py
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from sqlalchemy import Boolean, String, Integer, DateTime, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
-import bcrypt
 
 from app.db.base_class import Base
 from app.core.security import get_password_hash, verify_password
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .model import MLModel
     from .training import Training
     from .evaluation import Evaluation
+    from .deployment import Deployment
 
 class User(Base):
     """
@@ -109,6 +110,11 @@ class User(Base):
     evaluations: Mapped[List["Evaluation"]] = relationship(
         "Evaluation", 
         back_populates="owner", 
+        cascade="all, delete-orphan"
+    )
+    deployments: Mapped[List["Deployment"]] = relationship(
+        "Deployment",
+        back_populates="owner",
         cascade="all, delete-orphan"
     )
 
