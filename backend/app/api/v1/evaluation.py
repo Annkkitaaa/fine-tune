@@ -115,7 +115,7 @@ async def evaluate_model(
     evaluation_in: EvaluationCreate
 ) -> Any:
     """Evaluate a model on a given dataset."""
-    start_time = time.time()
+    start_time = datetime.utcnow()
     
     try:
         # Get model and dataset
@@ -139,7 +139,7 @@ async def evaluate_model(
             random_state=evaluation_in.parameters.random_seed
         )
 
-        # Make actual predictions
+        # Make predictions
         y_pred = await make_predictions(model, X_test)
         
         # Calculate metrics
@@ -163,7 +163,7 @@ async def evaluate_model(
         if metrics_config.r2:
             metrics['r2'] = float(r2_score(y_test, y_pred))
 
-        # Calculate and format confusion matrix
+        # Calculate confusion matrix
         conf_matrix = confusion_matrix(y_test, y_pred)
         formatted_conf_matrix = format_confusion_matrix(conf_matrix)
         
@@ -171,7 +171,7 @@ async def evaluate_model(
         feature_importance = calculate_feature_importance(model, X)
         
         # Calculate execution time
-        execution_time = time.time() - start_time
+        execution_time = (datetime.utcnow() - start_time).total_seconds()
 
         # Create evaluation record
         evaluation = EvaluationModel(
@@ -186,7 +186,9 @@ async def evaluate_model(
             f1_score=metrics.get('f1_score'),
             confusion_matrix=formatted_conf_matrix,
             feature_importance=feature_importance,
-            execution_time=execution_time
+            execution_time=execution_time,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
 
         db.add(evaluation)
@@ -201,7 +203,7 @@ async def evaluate_model(
             status_code=400,
             detail=f"Error during evaluation: {str(e)}"
         )
-
+        
 @router.get("/{evaluation_id}", response_model=Evaluation)
 def get_evaluation(
     evaluation_id: int,
