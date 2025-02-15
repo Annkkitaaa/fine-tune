@@ -3,6 +3,12 @@ from typing import Any, Dict, List, Optional, Union, ClassVar
 from pydantic import AnyHttpUrl, PostgresDsn, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
+from typing_extensions import TypedDict
+
+class TimezoneConfig(TypedDict):
+    default_timezone: str
+    store_timezone: bool
+    convert_timezone: bool
 
 class Settings(BaseSettings):
     # Basic Configuration
@@ -35,12 +41,16 @@ class Settings(BaseSettings):
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS: List[str] = [".csv", ".json", ".parquet", ".xlsx"]
 
-    # Pipeline Configuration with proper type annotation
+    # Pipeline Configuration
     PIPELINE_CONFIG: ClassVar[Dict[str, Dict[str, Any]]] = {
         'preprocessing_config': {
             'handle_missing': True,
+            'missing_strategy': 'mean',
             'handle_outliers': True,
-            'feature_engineering': True
+            'outlier_method': 'zscore',
+            'outlier_threshold': 3,
+            'scaling': True,
+            'feature_engineering': False
         },
         'augmentation_config': {
             'method': 'smote',
@@ -50,6 +60,13 @@ class Settings(BaseSettings):
             'perform_correlation_analysis': True,
             'perform_distribution_analysis': True
         }
+    }
+
+    # Timezone Configuration
+    TIMEZONE_CONFIG: ClassVar[TimezoneConfig] = {
+        'default_timezone': 'UTC',
+        'store_timezone': True,
+        'convert_timezone': True
     }
     
     # ML Model Configuration

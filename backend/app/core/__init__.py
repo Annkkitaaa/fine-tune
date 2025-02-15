@@ -1,11 +1,19 @@
+# app/core/__init__.py
 from .config import settings
 from .security import verify_password, get_password_hash
-from .events import create_start_app_handler, create_stop_app_handler
+from .lifecycle import (
+    AppLifecycle,  # Note the lowercase 'c'
+    lifecycle,     # Export the lifecycle instance
+    setup_lifecycle_handlers,
+    lifespan
+)
 
 __all__ = [
     "settings",
     "verify_password",
     "get_password_hash",
-    "create_start_app_handler",
-    "create_stop_app_handler"
+    "AppLifecycle",
+    "lifecycle",
+    "setup_lifecycle_handlers",
+    "lifespan"
 ]

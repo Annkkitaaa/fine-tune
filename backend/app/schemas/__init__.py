@@ -9,6 +9,9 @@ from .training import Training, TrainingCreate, TrainingUpdate, TrainingStatus
 from .evaluation import Evaluation, EvaluationCreate, EvaluationUpdate
 from .relationships import TrainingWithRelations, EvaluationWithRelations
 from .deployment import Deployment, DeploymentCreate, DeploymentUpdate
+from .pipeline import PreprocessingConfig, AnalysisConfig, AugmentationConfig, PipelineConfig, PipelineRequest, PipelineResponse
+
+
 
 __all__ = [
     "TimestampMixin",
@@ -19,5 +22,11 @@ __all__ = [
     "MLModel", "MLModelCreate", "MLModelUpdate",  # Updated names
     "Training", "TrainingCreate", "TrainingUpdate", "TrainingStatus",
     "Evaluation", "EvaluationCreate", "EvaluationUpdate",
-    "TrainingWithRelations", "EvaluationWithRelations","Deployment" , "DeploymentCreate", "DeploymentUpdate"
+    "TrainingWithRelations", "EvaluationWithRelations","Deployment" , "DeploymentCreate", "DeploymentUpdate",
+    "PreprocessingConfig",
+    "AnalysisConfig",
+    "AugmentationConfig",
+    "PipelineConfig",
+    "PipelineRequest",
+    "PipelineResponse"
 ]

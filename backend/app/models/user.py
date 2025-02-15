@@ -38,7 +38,8 @@ class User(Base):
     trainings = relationship("Training", back_populates="owner", cascade="all, delete-orphan")
     evaluations = relationship("Evaluation", back_populates="owner", cascade="all, delete-orphan")
     deployments = relationship("Deployment", back_populates="owner", cascade="all, delete-orphan")
-
+    pipelines = relationship("Pipeline", back_populates="owner", cascade="all, delete-orphan")
+    
     def verify_password(self, password: str) -> bool:
         return verify_password(password, self.hashed_password)
 

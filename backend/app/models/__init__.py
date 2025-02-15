@@ -5,6 +5,7 @@ from .dataset import Dataset
 from .model import MLModel  # Changed from Model to MLModel
 from .training import Training
 from .evaluation import Evaluation
+from .pipeline import Pipeline
 
 __all__ = [
     "User",
@@ -12,5 +13,6 @@ __all__ = [
     "Dataset",
     "MLModel",
     "Training",
-    "Evaluation"
+    "Evaluation",
+    "Pipeline"
 ]

@@ -47,3 +47,6 @@ shap>=0.44.0  # for model interpretability
 lightgbm>=4.1.0  # for gradient boosting
 xgboost>=2.0.2  # for gradient boosting
 category-encoders>=2.6.3  # for advanced categorical encoding
+pyarrow
+psutil
+gputil

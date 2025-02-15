@@ -1,0 +1,27 @@
+{
+    "shape": [
+        775,
+        8
+    ],
+    "columns": [
+        "text",
+        "x",
+        "y",
+        "width",
+        "paragraph_height",
+        "para_line_count",
+        "Avg_line_height",
+        "file_name"
+    ],
+    "dtypes": {
+        "text": "object",
+        "x": "float64",
+        "y": "float64",
+        "width": "float64",
+        "paragraph_height": "float64",
+        "para_line_count": "int64",
+        "Avg_line_height": "float64",
+        "file_name": "object"
+    },
+    "timestamp": "2025-02-15T18:28:43.580438"
+}

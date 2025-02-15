@@ -1,0 +1,33 @@
+{
+    "start_time": "2025-02-15T02:47:05.374478",
+    "stages": {},
+    "errors": [
+        "Initial validation error: 'dict' object has no attribute 'required_columns'",
+        "Preprocessing error: 'WindowsPath' object has no attribute 'endswith'",
+        "Analysis error: Trace type 'pie' is not compatible with subplot type 'xy'\nat grid position (1, 2)\n\nSee the docstring for the specs argument to plotly.subplots.make_subplots\nfor more information on subplot types",
+        "Final validation error: 'dict' object has no attribute 'required_columns'"
+    ],
+    "warnings": [],
+    "metadata": {
+        "config": {
+            "preprocessing": {
+                "handle_missing": true,
+                "missing_strategy": "mean",
+                "handle_outliers": false,
+                "outlier_method": "zscore",
+                "outlier_threshold": 3.0,
+                "scaling": null,
+                "encoding": null
+            },
+            "analysis": {
+                "perform_correlation": true,
+                "perform_feature_importance": false,
+                "generate_visualizations": false
+            },
+            "augmentation": null
+        },
+        "feature_names": null
+    },
+    "end_time": "2025-02-15T02:47:06.367242",
+    "duration": 0.992764
+}

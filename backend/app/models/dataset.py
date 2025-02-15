@@ -38,6 +38,6 @@ class Dataset(Base):
     owner = relationship("User", back_populates="datasets")
     project = relationship("Project", back_populates="datasets")
     trainings = relationship("Training", back_populates="dataset")
-
+    pipelines = relationship("Pipeline", back_populates="dataset", cascade="all, delete-orphan")
     # ✅ Added missing relationship
     evaluations = relationship("Evaluation", back_populates="dataset", cascade="all, delete-orphan")
