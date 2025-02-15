@@ -1,8 +1,7 @@
-# sklearn.py
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.model_selection import cross_val_score, KFold
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     mean_squared_error, r2_score, mean_absolute_error
@@ -14,6 +13,8 @@ import logging
 from pathlib import Path
 import json
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class SklearnTrainer:
@@ -24,13 +25,15 @@ class SklearnTrainer:
         self.is_classifier = None
         self.feature_importance = None
 
+    def prepare_data(self, X_train, y_train, X_val=None, y_val=None):
+        return (X_train, y_train), (X_val, y_val) if X_val is not None and y_val is not None else (None, None)
+
     def _initialize_model(self) -> BaseEstimator:
-        """
-        Initialize scikit-learn model based on configuration
-        """
         model_type = self.model_config.get("type", "random_forest")
         task = self.model_config.get("task", "regression")
         self.is_classifier = task == "classification"
+
+        logger.debug(f"Initializing model: {model_type} for task: {task}")
 
         if model_type == "random_forest":
             if self.is_classifier:
@@ -48,7 +51,7 @@ class SklearnTrainer:
                     max_depth=self.model_config.get("max_depth"),
                     min_samples_split=self.model_config.get("min_samples_split", 2),
                     min_samples_leaf=self.model_config.get("min_samples_leaf", 1),
-                    max_features=self.model_config.get("max_features", "auto"),
+                    max_features=self.model_config.get("max_features", "sqrt"),
                     random_state=42
                 )
         elif model_type == "linear":
@@ -67,17 +70,76 @@ class SklearnTrainer:
         else:
             raise ValueError(f"Unsupported model type: {model_type}")
 
-    def _compute_metrics(
+    def _convert_to_numpy(self, data):
+        """
+        Converts input data to a numpy array, ensuring all rows have the same length.
+        """
+        logger.debug(f"Converting data to NumPy: {type(data)}")
+        try:
+            np_data = np.array(data, dtype=np.float32)
+            logger.debug(f"Converted shape: {np_data.shape}")
+            return np_data
+        except ValueError as e:
+            logger.warning(f"ValueError in conversion: {e}. Attempting shape correction.")
+
+            max_len = max(len(row) if isinstance(row, (list, np.ndarray)) else 0 for row in data)
+            fixed_data = np.array([
+                np.pad(row, (0, max_len - len(row)), mode='constant') if isinstance(row, (list, np.ndarray)) and len(row) < max_len
+                else row[:max_len] if isinstance(row, (list, np.ndarray))
+                else np.zeros(max_len)
+                for row in data
+            ], dtype=np.float32)
+            logger.debug(f"Fixed shape: {fixed_data.shape}")
+            return fixed_data
+
+    async def train(
         self,
-        y_true: np.ndarray,
-        y_pred: np.ndarray,
-        prefix: str = ""
-    ) -> Dict[str, float]:
-        """
-        Compute evaluation metrics based on task type
-        """
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: Optional[np.ndarray] = None,
+        y_val: Optional[np.ndarray] = None,
+        feature_names: Optional[List[str]] = None
+    ) -> Tuple[BaseEstimator, Dict[str, Any]]:
+        try:
+            # Convert to NumPy to prevent sequence errors
+            logger.debug("Converting training data to NumPy...")
+            X_train = self._convert_to_numpy(X_train)
+            y_train = self._convert_to_numpy(y_train)
+
+            if X_val is not None and y_val is not None:
+                logger.debug("Converting validation data to NumPy...")
+                X_val = self._convert_to_numpy(X_val)
+                y_val = self._convert_to_numpy(y_val)
+
+            logger.info(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+            if X_val is not None and y_val is not None:
+                logger.info(f"X_val shape: {X_val.shape}, y_val shape: {y_val.shape}")
+
+            # Initialize and train model
+            logger.debug("Initializing model...")
+            self.model = self._initialize_model()
+            logger.debug("Fitting model on training data...")
+            self.model.fit(X_train, y_train)
+
+            # Compute predictions
+            train_pred = self.model.predict(X_train)
+            metrics = self._compute_metrics(y_train, train_pred, prefix='train_')
+
+            if X_val is not None and y_val is not None:
+                val_pred = self.model.predict(X_val)
+                metrics.update(self._compute_metrics(y_val, val_pred, prefix='val_'))
+
+            logger.info("Training complete. Metrics computed.")
+            return self.model, metrics
+
+        except Exception as e:
+            logger.error(f"Error during training: {str(e)}", exc_info=True)
+            raise
+
+    def _compute_metrics(self, y_true: np.ndarray, y_pred: np.ndarray, prefix: str = "") -> Dict[str, float]:
+        logger.debug(f"Computing metrics for {prefix}...")
         metrics = {}
-        
+
         if self.is_classifier:
             metrics[f'{prefix}accuracy'] = accuracy_score(y_true, y_pred)
             metrics[f'{prefix}precision'] = precision_score(y_true, y_pred, average='weighted')
@@ -88,175 +150,19 @@ class SklearnTrainer:
             metrics[f'{prefix}rmse'] = np.sqrt(metrics[f'{prefix}mse'])
             metrics[f'{prefix}mae'] = mean_absolute_error(y_true, y_pred)
             metrics[f'{prefix}r2'] = r2_score(y_true, y_pred)
-        
+
+        logger.info(f"Metrics computed: {metrics}")
         return metrics
 
-    def _extract_feature_importance(self, feature_names: Optional[List[str]] = None) -> Dict[str, float]:
-        """
-        Extract feature importance if available
-        """
-        if not hasattr(self.model, 'feature_importances_'):
-            return None
-        
-        importances = self.model.feature_importances_
-        if feature_names is None:
-            feature_names = [f'feature_{i}' for i in range(len(importances))]
-        
-        return dict(zip(feature_names, importances))
-
-    async def train(
-        self,
-        X_train: np.ndarray,
-        y_train: np.ndarray,
-        X_val: Optional[np.ndarray] = None,
-        y_val: Optional[np.ndarray] = None,
-        feature_names: Optional[List[str]] = None
-    ) -> Tuple[BaseEstimator, Dict[str, Any]]:
-        """
-        Train the scikit-learn model and return both model and metrics
-        """
-        try:
-            # Initialize and train model
-            self.model = self._initialize_model()
-            self.model.fit(X_train, y_train)
-            
-            # Compute predictions
-            train_pred = self.model.predict(X_train)
-            
-            # Initialize metrics dictionary
-            metrics = {}
-            
-            # Compute training metrics
-            metrics.update(self._compute_metrics(y_train, train_pred, prefix='train_'))
-            
-            # Compute validation metrics if validation data is provided
-            if X_val is not None and y_val is not None:
-                val_pred = self.model.predict(X_val)
-                metrics.update(self._compute_metrics(y_val, val_pred, prefix='val_'))
-            
-            # Perform cross-validation if specified
-            if self.training_config.get('cross_validation', False):
-                cv = self.training_config.get('cv_folds', 5)
-                scoring = 'accuracy' if self.is_classifier else 'r2'
-                cv_scores = cross_val_score(
-                    self.model,
-                    X_train,
-                    y_train,
-                    cv=cv,
-                    scoring=scoring
-                )
-                metrics['cv_mean'] = cv_scores.mean()
-                metrics['cv_std'] = cv_scores.std()
-            
-            # Extract feature importance
-            self.feature_importance = self._extract_feature_importance(feature_names)
-            if self.feature_importance:
-                metrics['feature_importance'] = self.feature_importance
-            
-            # Return both model and metrics
-            return self.model, metrics
-            
-        except Exception as e:
-            logger.error(f"Error during training: {str(e)}")
-            raise
-
-
-    def evaluate(
-        self,
-        X_test: np.ndarray,
-        y_test: np.ndarray
-    ) -> Dict[str, float]:
-        """
-        Evaluate the model on test data
-        """
+    def predict(self, X: np.ndarray) -> np.ndarray:
         if self.model is None:
             raise ValueError("Model not trained yet")
-        
-        try:
-            y_pred = self.model.predict(X_test)
-            metrics = self._compute_metrics(y_test, y_pred, prefix='test_')
-            return metrics
-            
-        except Exception as e:
-            logger.error(f"Error during evaluation: {str(e)}")
-            raise
 
-    def predict(
-        self,
-        X: np.ndarray,
-        return_proba: bool = False
-    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
-        """
-        Make predictions using the trained model
-        """
-        if self.model is None:
-            raise ValueError("Model not trained yet")
-        
         try:
-            predictions = self.model.predict(X)
-            
-            if return_proba and self.is_classifier and hasattr(self.model, 'predict_proba'):
-                probabilities = self.model.predict_proba(X)
-                return predictions, probabilities
-            
-            return predictions
-            
+            logger.debug("Converting prediction input to NumPy...")
+            X = self._convert_to_numpy(X)
+            logger.debug(f"Predicting with input shape: {X.shape}")
+            return self.model.predict(X)
         except Exception as e:
-            logger.error(f"Error during prediction: {str(e)}")
-            raise
-
-    def save_model(self, path: Union[str, Path]) -> None:
-        """
-        Save the trained model and configurations
-        """
-        if self.model is None:
-            raise ValueError("No model to save")
-        
-        try:
-            # Create directory if it doesn't exist
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-            
-            # Save model
-            joblib.dump(self.model, path)
-            
-            # Save configurations and feature importance
-            config_path = Path(path).parent / f"{Path(path).stem}_config.json"
-            config_data = {
-                'model_config': self.model_config,
-                'training_config': self.training_config,
-                'feature_importance': self.feature_importance,
-                'is_classifier': self.is_classifier
-            }
-            
-            with open(config_path, 'w') as f:
-                json.dump(config_data, f, indent=4)
-                
-            logger.info(f"Model saved successfully to {path}")
-            
-        except Exception as e:
-            logger.error(f"Error saving model: {str(e)}")
-            raise
-
-    def load_model(self, path: Union[str, Path]) -> None:
-        """
-        Load a trained model and configurations
-        """
-        try:
-            # Load model
-            self.model = joblib.load(path)
-            
-            # Load configurations
-            config_path = Path(path).parent / f"{Path(path).stem}_config.json"
-            with open(config_path, 'r') as f:
-                config_data = json.load(f)
-                
-            self.model_config = config_data['model_config']
-            self.training_config = config_data['training_config']
-            self.feature_importance = config_data['feature_importance']
-            self.is_classifier = config_data['is_classifier']
-            
-            logger.info(f"Model loaded successfully from {path}")
-            
-        except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Error during prediction: {str(e)}", exc_info=True)
             raise

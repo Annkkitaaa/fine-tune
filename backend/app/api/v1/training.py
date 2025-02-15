@@ -1,6 +1,7 @@
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.api.deps import get_current_user, get_db
 from app.schemas.training import TrainingCreate, Training
@@ -26,7 +27,8 @@ async def start_training(
         dataset_id=training_in.dataset_id,
         hyperparameters=training_in.hyperparameters,
         status="queued",
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        updated_at=datetime.utcnow()  # Ensure updated_at is set
     )
     db.add(training)
     db.commit()
@@ -54,6 +56,8 @@ def get_training_status(
         TrainingModel.id == training_id,
         TrainingModel.owner_id == current_user.id
     ).first()
+    
     if not training:
         raise HTTPException(404, "Training job not found")
+    
     return training

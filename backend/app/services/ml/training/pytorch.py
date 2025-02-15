@@ -1,4 +1,3 @@
-# pytorch.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 class CustomDataset(Dataset):
     def __init__(self, features: np.ndarray, targets: np.ndarray):
         self.features = torch.FloatTensor(features)
-        self.targets = torch.FloatTensor(targets)
+        self.targets = torch.FloatTensor(targets).unsqueeze(1)  # Ensure shape (batch_size, 1)
 
     def __len__(self):
         return len(self.features)
@@ -131,6 +130,7 @@ class PyTorchTrainer:
                 history["train_loss"].append(avg_train_loss)
 
                 # Validation
+                val_loss = None
                 if val_loader:
                     val_loss = self.evaluate(val_loader)
                     history["val_loss"].append(val_loss)
@@ -139,7 +139,7 @@ class PyTorchTrainer:
                 logger.info(
                     f"Epoch {epoch+1}/{epochs} - "
                     f"train_loss: {avg_train_loss:.4f}"
-                    + (f" - val_loss: {val_loss:.4f}" if val_loader else "")
+                    + (f" - val_loss: {val_loss:.4f}" if val_loss is not None else "")
                 )
 
                 # Execute callbacks
@@ -171,6 +171,21 @@ class PyTorchTrainer:
 
         return val_loss / len(val_loader)
 
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Make predictions with the trained model
+        """
+        if self.model is None:
+            raise ValueError("Model has not been trained or loaded.")
+
+        self.model.eval()
+        X_tensor = torch.FloatTensor(X).to(self.device)
+
+        with torch.no_grad():
+            predictions = self.model(X_tensor).cpu().numpy()
+
+        return predictions
+
     def save_model(self, path: Union[str, Path]) -> None:
         """
         Save the trained model
@@ -189,15 +204,17 @@ class PyTorchTrainer:
         """
         Load a trained model
         """
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=self.device)
         self.model_config = checkpoint['model_config']
         self.training_config = checkpoint['training_config']
         
-        input_dim = self.model_config['input_dim']
-        output_dim = self.model_config['output_dim']
+        input_dim = self.model_config.get('input_dim')
+        output_dim = self.model_config.get('output_dim', 1)
         
-        self.model = self._initialize_model(input_dim, output_dim)
+        self.model = self._initialize_model(input_dim, output_dim).to(self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         
         self.optimizer = optim.Adam(self.model.parameters())
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        logger.info(f"Model loaded successfully from {path}")

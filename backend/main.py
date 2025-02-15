@@ -1,12 +1,10 @@
-# main.py
 import os
+import asyncio
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import api_router
-import logging
-from typing import Callable
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -33,24 +31,32 @@ def create_app() -> FastAPI:
     async def startup_event():
         logger.info("Starting up application...")
         try:
-            # Initialize any async resources here
+            # Initialize async resources if needed
             pass
         except Exception as e:
-            logger.error(f"Error during startup: {e}")
+            logger.error(f"Error during startup: {e}", exc_info=True)
             raise
 
     @app.on_event("shutdown")
     async def shutdown_event():
         logger.info("Shutting down application...")
         try:
-            # Clean up any async resources here
             tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-            [task.cancel() for task in tasks]
-            await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"Cancelled {len(tasks)} tasks")
+            
+            # Cancel tasks properly
+            for task in tasks:
+                task.cancel()
+            
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Handle cancelled tasks
+            cancelled_tasks = sum(1 for result in results if isinstance(result, asyncio.CancelledError))
+            logger.info(f"Cancelled {cancelled_tasks}/{len(tasks)} tasks successfully.")
+
+        except asyncio.CancelledError:
+            logger.warning("Shutdown process was interrupted.")
         except Exception as e:
-            logger.error(f"Error during shutdown: {e}")
-            raise
+            logger.error(f"Error during shutdown: {e}", exc_info=True)
 
     # Root route to check deployment
     @app.get("/")
