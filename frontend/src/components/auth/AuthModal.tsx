@@ -79,11 +79,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
 
     try {
+      // Use email as username for consistency with backend
       await login(username, password);
       onClose();
-    } catch (err) {
-      // Error is handled by the auth store
-      console.error('Sign in error:', err);
+    } catch (err: any) {
+      // Error is already handled by the auth store
+      const errorMessage = err?.message || 'An error occurred during sign in';
+      setFormErrors(prev => ({ ...prev, signIn: errorMessage }));
     }
   };
 
@@ -95,42 +97,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setFormErrors(prev => ({ ...prev, register: '' }));
     clearError();
 
-    // Validate all fields are filled
-    if (!email || !password || !confirmPassword || !fullName) {
-      setFormErrors(prev => ({ ...prev, register: 'Please fill in all fields' }));
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setFormErrors(prev => ({ ...prev, register: 'Please enter a valid email address' }));
-      return;
-    }
-
-    // Validate password
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      setFormErrors(prev => ({ ...prev, register: passwordError }));
-      return;
-    }
-
-    // Validate password confirmation
-    if (password !== confirmPassword) {
-      setFormErrors(prev => ({ ...prev, register: 'Passwords do not match' }));
-      return;
-    }
-
     try {
+      // Validate all fields are filled
+      if (!email || !password || !confirmPassword || !fullName) {
+        throw new Error('Please fill in all fields');
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Validate password
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        throw new Error(passwordError);
+      }
+
+      // Validate password confirmation
+      if (password !== confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
       await register(email, password, fullName);
       setRegistrationSuccess(true);
+      
+      // Switch to sign in after successful registration
       setTimeout(() => {
         setActiveTab('signin');
         resetForms();
       }, 2000);
-    } catch (err) {
+    } catch (err: any) {
       setRegistrationSuccess(false);
-      console.error('Registration error:', err);
+      const errorMessage = err?.message || 'An error occurred during registration';
+      setFormErrors(prev => ({ ...prev, register: errorMessage }));
     }
   };
 
@@ -140,6 +141,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
+
+  const getErrorMessage = (tabError: string, formError: string): string => {
+    // Prioritize form errors over general errors
+    return formError || (typeof tabError === 'string' ? tabError : '');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -154,6 +160,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
                 onClick={() => handleTabChange('signin')}
+                type="button"
               >
                 Sign In
               </button>
@@ -164,6 +171,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                 }`}
                 onClick={() => handleTabChange('register')}
+                type="button"
               >
                 Register
               </button>
@@ -173,25 +181,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {activeTab === 'signin' ? (
             <form onSubmit={handleSignIn}>
               <CardContent className="space-y-4">
-                {(error || formErrors.signIn) && (
+                {getErrorMessage(error, formErrors.signIn) && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      {typeof error === 'string' ? error : formErrors.signIn}
+                      {getErrorMessage(error, formErrors.signIn)}
                     </AlertDescription>
                   </Alert>
                 )}
                 
                 <div className="space-y-2">
                   <Input
-                    label="Username or Email"
-                    type="text"
+                    label="Email"
+                    type="email"
                     value={formData.signIn.username}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       signIn: { ...prev.signIn, username: e.target.value }
                     }))}
-                    placeholder="Enter your username or email"
+                    placeholder="Enter your email"
                     required
                   />
                 </div>
@@ -246,11 +254,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </Alert>
                 )}
                 
-                {(error || formErrors.register) && (
+                {getErrorMessage(error, formErrors.register) && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      {error || formErrors.register}
+                      {getErrorMessage(error, formErrors.register)}
                     </AlertDescription>
                   </Alert>
                 )}
