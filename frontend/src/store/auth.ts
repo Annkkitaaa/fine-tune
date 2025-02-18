@@ -3,6 +3,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@/types/auth.types';
 import { authService } from '@/services/auth.service';
+import { AxiosError } from 'axios';
+
+interface ValidationError {
+  loc: string[];
+  msg: string;
+  type: string;
+  input?: any;
+}
 
 interface AuthState {
   user: User | null;
@@ -16,9 +24,53 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof AxiosError) {
+    const response = error.response?.data;
+    
+    // Handle array of validation errors
+    if (Array.isArray(response)) {
+      return response
+        .map((err: ValidationError) => err.msg)
+        .filter(Boolean)
+        .join(', ');
+    }
+    
+    // Handle single error object
+    if (response?.detail) {
+      return typeof response.detail === 'string' 
+        ? response.detail 
+        : 'Validation error occurred';
+    }
+
+    // Handle error message
+    if (response?.message) {
+      return response.message;
+    }
+
+    // Handle status code specific messages
+    switch (error.response?.status) {
+      case 400:
+        return 'Invalid request data';
+      case 401:
+        return 'Authentication failed';
+      case 422:
+        return 'Invalid input data';
+      default:
+        return error.message || 'An error occurred';
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'An unexpected error occurred';
+};
+
 export const useAuth = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       loading: false,
@@ -52,7 +104,7 @@ export const useAuth = create<AuthState>()(
       login: async (username: string, password: string) => {
         try {
           set({ loading: true, error: null });
-          await authService.login(username, password);
+          const response = await authService.login(username, password);
           const user = await authService.getCurrentUser();
           set({ 
             isAuthenticated: true,
@@ -60,14 +112,16 @@ export const useAuth = create<AuthState>()(
             loading: false,
             error: null
           });
-        } catch (error: any) {
+          return response;
+        } catch (error) {
+          const errorMessage = extractErrorMessage(error);
           set({ 
             isAuthenticated: false,
             user: null,
             loading: false,
-            error: error.message
+            error: errorMessage
           });
-          throw error;
+          throw new Error(errorMessage);
         }
       },
 
@@ -75,13 +129,14 @@ export const useAuth = create<AuthState>()(
         try {
           set({ loading: true, error: null });
           await authService.register(email, password, fullName);
-          set({ loading: false });
-        } catch (error: any) {
+          set({ loading: false, error: null });
+        } catch (error) {
+          const errorMessage = extractErrorMessage(error);
           set({ 
             loading: false,
-            error: error.message
+            error: errorMessage
           });
-          throw error;
+          throw new Error(errorMessage);
         }
       },
 
