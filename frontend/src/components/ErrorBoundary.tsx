@@ -1,10 +1,10 @@
 // src/components/ErrorBoundary.tsx
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 interface State {
@@ -32,12 +32,27 @@ class ErrorBoundary extends Component<Props, State> {
     // Handle validation error object
     if (error.message && typeof error.message === 'object') {
       try {
-        const errorObj = error.message;
-        if ('detail' in errorObj) {
-          return Array.isArray(errorObj.detail) 
-            ? errorObj.detail.map((err: any) => err.msg).join(', ')
-            : String(errorObj.detail);
+        const errorObj = JSON.parse(JSON.stringify(error.message));
+        
+        // Handle detail array
+        if (errorObj.detail && Array.isArray(errorObj.detail)) {
+          return errorObj.detail
+            .map((err: any) => err.msg || String(err))
+            .filter(Boolean)
+            .join(', ');
         }
+        
+        // Handle detail string
+        if (errorObj.detail) {
+          return String(errorObj.detail);
+        }
+        
+        // Handle message field
+        if (errorObj.message) {
+          return String(errorObj.message);
+        }
+
+        // Fallback to stringifying the object
         return JSON.stringify(errorObj);
       } catch {
         return 'An unexpected error occurred';
