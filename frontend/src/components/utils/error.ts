@@ -1,5 +1,4 @@
 // src/utils/error.ts
-
 interface ValidationError {
     loc: (string | number)[];
     msg: string;
@@ -7,39 +6,28 @@ interface ValidationError {
     input?: any;
   }
   
-  interface ErrorDetail {
-    detail: ValidationError[] | string;
-  }
-  
-  export const formatValidationError = (error: unknown): string => {
+  export const formatError = (error: unknown): string => {
     if (!error) return '';
   
-    // Handle ValidationError array
+    // Handle array of validation errors
     if (Array.isArray(error)) {
       return error.map((err: ValidationError) => err.msg).join(', ');
     }
   
-    // Handle error object with detail property
+    // Handle error object
     if (typeof error === 'object' && error !== null) {
-      const errorObj = error as ErrorDetail;
-      if ('detail' in errorObj) {
-        if (Array.isArray(errorObj.detail)) {
-          return errorObj.detail.map((err: ValidationError) => err.msg).join(', ');
+      if ('detail' in error) {
+        const { detail } = error as { detail: ValidationError[] | string };
+        if (Array.isArray(detail)) {
+          return detail.map(err => err.msg).join(', ');
         }
-        return String(errorObj.detail);
+        return String(detail);
       }
       
-      // Handle Error instance
       if (error instanceof Error) {
         return error.message;
       }
     }
   
-    // Handle string error
-    if (typeof error === 'string') {
-      return error;
-    }
-  
-    // Fallback
-    return 'An unexpected error occurred';
+    return String(error);
   };
