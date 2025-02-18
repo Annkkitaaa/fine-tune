@@ -1,16 +1,45 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
-import { Switch } from '../components/ui/Switch';
-import { Slider } from '../components/ui/Slider';
-import { Button } from '../components/ui/Button';
-import { Search, Upload, Filter, Database } from 'lucide-react';
+// src/pages/DatasetsPage.tsx
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Switch } from '@/components/ui/Switch';
+import { Slider } from '@/components/ui/Slider';
+import { Alert, AlertDescription} from '@/components/ui/Alert';
+import { Loader2, Upload, Search, Filter, Database, AlertCircle } from 'lucide-react';
+import { useDatasets } from '@/hooks/useDatasets';
+import { Dataset } from '@/types';
+
+interface DatasetFormState {
+  name: string;
+  description: string;
+  format: string;
+  handleMissingData: boolean;
+  missingStrategy: string;
+  handleOutliers: boolean;
+  outlierMethod: string;
+  outlierThreshold: number;
+  enableScaling: boolean;
+  enableFeatureEngineering: boolean;
+}
 
 export const DatasetsPage: React.FC = () => {
+  const {
+    datasets,
+    loading,
+    error,
+    hasMore,
+    fetchDatasets,
+    uploadDataset,
+    deleteDataset,
+    loadMore
+  } = useDatasets({ pageSize: 50 });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [datasetForm, setDatasetForm] = useState({
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [datasetForm, setDatasetForm] = useState<DatasetFormState>({
     name: '',
     description: '',
     format: 'csv',
@@ -40,29 +69,84 @@ export const DatasetsPage: React.FC = () => {
     { value: 'iqr', label: 'IQR' },
   ];
 
-  const mockDatasets = [
-    {
-      id: '1',
-      name: 'ImageNet Subset',
-      format: 'JPEG',
-      size: '1.2 GB',
-      rows: '50,000',
-      features: '224x224x3',
-      createdAt: '2024-03-15',
-    },
-    {
-      id: '2',
-      name: 'Sensor Data',
-      format: 'CSV',
-      size: '500 MB',
-      rows: '1,000,000',
-      features: '24',
-      createdAt: '2024-03-14',
-    },
-  ];
+  useEffect(() => {
+    fetchDatasets();
+  }, [fetchDatasets]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+
+  const handleUploadDataset = async () => {
+    if (!selectedFile) return;
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('config', JSON.stringify({
+      name: datasetForm.name,
+      description: datasetForm.description,
+      format: datasetForm.format,
+      preprocessing_config: {
+        handle_missing: datasetForm.handleMissingData,
+        missing_strategy: datasetForm.missingStrategy,
+        handle_outliers: datasetForm.handleOutliers,
+        outlier_method: datasetForm.outlierMethod,
+        outlier_threshold: datasetForm.outlierThreshold,
+        scaling: datasetForm.enableScaling,
+        feature_engineering: datasetForm.enableFeatureEngineering,
+      }
+    }));
+
+    try {
+      await uploadDataset(formData);
+      resetForm();
+    } catch (error) {
+      console.error('Upload failed:', error);
+    }
+  };
+
+  const handleDeleteDataset = async (datasetId: number) => {
+    try {
+      await deleteDataset(datasetId);
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+  };
+
+  const resetForm = () => {
+    setShowUploadForm(false);
+    setSelectedFile(null);
+    setDatasetForm({
+      name: '',
+      description: '',
+      format: 'csv',
+      handleMissingData: true,
+      missingStrategy: 'mean',
+      handleOutliers: true,
+      outlierMethod: 'zscore',
+      outlierThreshold: 3,
+      enableScaling: true,
+      enableFeatureEngineering: false,
+    });
+  };
+
+  const filteredDatasets = datasets?.filter(dataset => 
+    dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    dataset.format.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  if (loading && !datasets?.length) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Datasets</h1>
         <Button onClick={() => setShowUploadForm(!showUploadForm)}>
@@ -71,6 +155,13 @@ export const DatasetsPage: React.FC = () => {
         </Button>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {showUploadForm && (
         <Card className="mb-8">
           <CardHeader>
@@ -78,38 +169,30 @@ export const DatasetsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium">Basic Information</h3>
-                <Input
-                  label="Name"
-                  value={datasetForm.name}
-                  onChange={(e) => setDatasetForm({ ...datasetForm, name: e.target.value })}
-                />
-                <Input
-                  label="Description"
-                  value={datasetForm.description}
-                  onChange={(e) => setDatasetForm({ ...datasetForm, description: e.target.value })}
-                />
-                <Select
-                  label="Format"
-                  options={formats}
-                  value={datasetForm.format}
-                  onChange={(value) => setDatasetForm({ ...datasetForm, format: value })}
-                />
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
-                  <Database className="mx-auto h-12 w-12 text-gray-400" />
-                  <div className="mt-4">
-                    <Button>Select File</Button>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    or drag and drop your dataset file here
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium">Preprocessing Configuration</h3>
-                <div className="space-y-4">
+              <Input
+                label="Name"
+                value={datasetForm.name}
+                onChange={(e) => setDatasetForm({ ...datasetForm, name: e.target.value })}
+              />
+              <Input
+                label="Description"
+                value={datasetForm.description}
+                onChange={(e) => setDatasetForm({ ...datasetForm, description: e.target.value })}
+              />
+              <Select
+                label="Format"
+                options={formats}
+                value={datasetForm.format}
+                onChange={(value) => setDatasetForm({ ...datasetForm, format: value })}
+              />
+              <Input
+                type="file"
+                onChange={handleFileSelect}
+                accept=".csv,.json,.parquet"
+              />
+              <div className="col-span-2">
+                <h3 className="text-lg font-medium mb-4">Preprocessing Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Switch
                     label="Handle Missing Data"
                     checked={datasetForm.handleMissingData}
@@ -123,9 +206,6 @@ export const DatasetsPage: React.FC = () => {
                       onChange={(value) => setDatasetForm({ ...datasetForm, missingStrategy: value })}
                     />
                   )}
-                </div>
-
-                <div className="space-y-4">
                   <Switch
                     label="Handle Outliers"
                     checked={datasetForm.handleOutliers}
@@ -134,41 +214,53 @@ export const DatasetsPage: React.FC = () => {
                   {datasetForm.handleOutliers && (
                     <>
                       <Select
-                        label="Outlier Detection Method"
+                        label="Outlier Method"
                         options={outlierMethods}
                         value={datasetForm.outlierMethod}
                         onChange={(value) => setDatasetForm({ ...datasetForm, outlierMethod: value })}
                       />
-                      <Slider
-                        label="Outlier Threshold"
-                        min={1}
-                        max={5}
-                        step={0.1}
-                        value={datasetForm.outlierThreshold}
-                        onChange={(value) => setDatasetForm({ ...datasetForm, outlierThreshold: value })}
-                      />
+                      <div className="col-span-2">
+                        <Slider
+                          label="Outlier Threshold"
+                          min={1}
+                          max={5}
+                          step={0.1}
+                          value={datasetForm.outlierThreshold}
+                          onChange={(value) => setDatasetForm({ ...datasetForm, outlierThreshold: value })}
+                        />
+                      </div>
                     </>
                   )}
+                  <Switch
+                    label="Enable Scaling"
+                    checked={datasetForm.enableScaling}
+                    onChange={(checked) => setDatasetForm({ ...datasetForm, enableScaling: checked })}
+                  />
+                  <Switch
+                    label="Enable Feature Engineering"
+                    checked={datasetForm.enableFeatureEngineering}
+                    onChange={(checked) => setDatasetForm({ ...datasetForm, enableFeatureEngineering: checked })}
+                  />
                 </div>
-
-                <Switch
-                  label="Enable Scaling"
-                  checked={datasetForm.enableScaling}
-                  onChange={(checked) => setDatasetForm({ ...datasetForm, enableScaling: checked })}
-                />
-
-                <Switch
-                  label="Enable Feature Engineering"
-                  checked={datasetForm.enableFeatureEngineering}
-                  onChange={(checked) => setDatasetForm({ ...datasetForm, enableFeatureEngineering: checked })}
-                />
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-4">
-              <Button variant="secondary" onClick={() => setShowUploadForm(false)}>
+              <Button variant="secondary" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button>Upload Dataset</Button>
+              <Button 
+                onClick={handleUploadDataset}
+                disabled={!selectedFile || loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload Dataset'
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -194,31 +286,34 @@ export const DatasetsPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Format
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rows
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Features
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Created At
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {mockDatasets.map((dataset) => (
+                {filteredDatasets.map((dataset) => (
                   <tr key={dataset.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {dataset.name}
@@ -227,24 +322,70 @@ export const DatasetsPage: React.FC = () => {
                       {dataset.format}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.size}
+                      {formatFileSize(dataset.size)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.rows}
+                      {dataset.num_rows?.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.features}
+                      {dataset.num_features}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.createdAt}
+                      {new Date(dataset.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mr-2"
+                        onClick={() => handleDeleteDataset(dataset.id)}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {hasMore && (
+              <div className="mt-4 text-center">
+                <Button 
+                  variant="secondary" 
+                  onClick={loadMore}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading More...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 };
+
+const formatFileSize = (bytes: number | undefined) => {
+  if (!bytes) return '-';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  return `${size.toFixed(1)} ${units[unitIndex]}`;
+};
+
+export default DatasetsPage;

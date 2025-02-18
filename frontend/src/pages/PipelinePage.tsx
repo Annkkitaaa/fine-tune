@@ -1,66 +1,105 @@
+// src/pages/PipelinePage.tsx
 import React, { useState } from 'react';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
-import { Select } from '../components/ui/Select';
-import { Switch } from '../components/ui/Switch';
-import { Slider } from '../components/ui/Slider';
-import { Button } from '../components/ui/Button';
-import { GitBranch, Play, Clock, AlertCircle } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Switch } from '@/components/ui/Switch';
+import { Slider } from '@/components/ui/Slider';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import {
+  Loader2,
+  GitBranch,
+  Play,
+  Clock,
+  AlertCircle,
+  Database,
+  BarChart2,
+  RefreshCcw,
+  Download
+} from 'lucide-react';
+import { MetricsVisualization } from '@/components/MetricsVisualization';
+import { usePipeline } from '@/hooks/usePipeline';
+import { usePipelineUtils } from '@/hooks/usePipelineUtils';
+import { useDatasets } from '@/hooks/useDatasets';
+import { 
+  AUGMENTATION_METHODS, 
+  MISSING_STRATEGIES, 
+  OUTLIER_METHODS 
+} from '@/lib/constants/pipeline';
 
 export const PipelinePage: React.FC = () => {
-  const [pipelineForm, setPipelineForm] = useState({
-    datasetId: '',
-    enableCorrelation: true,
-    enableFeatureImportance: true,
-    enableVisualization: true,
-    augmentationMethod: 'none',
-    augmentationFactor: 0.5,
-    randomState: 42,
-  });
+  const {
+    pipelines,
+    pipelineForm,
+    loading,
+    error,
+    createPipeline,
+    rerunPipeline,
+    updatePipelineForm,
+    resetPipelineForm,
+    refreshPipelines
+  } = usePipeline();
 
-  const mockDatasets = [
-    { value: 'dataset1', label: 'ImageNet Subset' },
-    { value: 'dataset2', label: 'Sensor Data' },
-  ];
+  const { datasets, loading: datasetsLoading } = useDatasets();
+  const utils = usePipelineUtils();
 
-  const augmentationMethods = [
-    { value: 'none', label: 'None' },
-    { value: 'rotation', label: 'Rotation' },
-    { value: 'flip', label: 'Flip' },
-    { value: 'noise', label: 'Noise' },
-  ];
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const mockPipelines = [
-    {
-      id: '1',
-      name: 'Image Classification Pipeline',
-      status: 'running',
-      progress: 75,
-      startTime: '10:30 AM',
-      duration: '45m',
-      errors: 0,
-    },
-    {
-      id: '2',
-      name: 'Data Preprocessing Pipeline',
-      status: 'completed',
-      progress: 100,
-      startTime: '09:15 AM',
-      duration: '1h 30m',
-      errors: 2,
-    },
-  ];
+  const handleCreatePipeline = async () => {
+    try {
+      await createPipeline();
+      setShowCreateForm(false);
+      resetPipelineForm();
+    } catch (error) {
+      console.error('Failed to create pipeline:', error);
+    }
+  };
+
+  const handleRerunPipeline = async (pipelineId: string) => {
+    try {
+      await rerunPipeline(pipelineId);
+    } catch (error) {
+      console.error('Failed to rerun pipeline:', error);
+    }
+  };
+
+  if (loading && !pipelines.length) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">ML Pipelines</h1>
-        <Button>
-          <GitBranch className="w-4 h-4 mr-2" />
-          Create Pipeline
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshPipelines}
+            disabled={loading}
+          >
+            <RefreshCcw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+            <GitBranch className="w-4 h-4 mr-2" />
+            Create Pipeline
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {showCreateForm && (
         <Card>
           <CardHeader>
             <h2 className="text-xl font-semibold">Pipeline Configuration</h2>
@@ -69,133 +108,424 @@ export const PipelinePage: React.FC = () => {
             <div className="space-y-6">
               <Select
                 label="Dataset"
-                options={mockDatasets}
+                options={datasets}
                 value={pipelineForm.datasetId}
-                onChange={(value) => setPipelineForm({ ...pipelineForm, datasetId: value })}
+                onChange={(value) => updatePipelineForm({ datasetId: value })}
+                isLoading={datasetsLoading}
               />
 
+              {/* Preprocessing Settings */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Analysis Settings</h3>
+                <h3 className="text-lg font-medium">Preprocessing Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <Switch
+                      label="Handle Missing Data"
+                      checked={pipelineForm.config.preprocessing.handleMissingData}
+                      onChange={(checked) => updatePipelineForm({
+                        config: {
+                          ...pipelineForm.config,
+                          preprocessing: {
+                            ...pipelineForm.config.preprocessing,
+                            handleMissingData: checked
+                          }
+                        }
+                      })}
+                    />
+                    {pipelineForm.config.preprocessing.handleMissingData && (
+                      <Select
+                        label="Missing Data Strategy"
+                        options={MISSING_STRATEGIES}
+                        value={pipelineForm.config.preprocessing.missingStrategy}
+                        onChange={(value) => updatePipelineForm({
+                          config: {
+                            ...pipelineForm.config,
+                            preprocessing: {
+                              ...pipelineForm.config.preprocessing,
+                              missingStrategy: value
+                            }
+                          }
+                        })}
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <Switch
+                      label="Handle Outliers"
+                      checked={pipelineForm.config.preprocessing.handleOutliers}
+                      onChange={(checked) => updatePipelineForm({
+                        config: {
+                          ...pipelineForm.config,
+                          preprocessing: {
+                            ...pipelineForm.config.preprocessing,
+                            handleOutliers: checked
+                          }
+                        }
+                      })}
+                    />
+                    {pipelineForm.config.preprocessing.handleOutliers && (
+                      <>
+                        <Select
+                          label="Outlier Method"
+                          options={OUTLIER_METHODS}
+                          value={pipelineForm.config.preprocessing.outlierMethod}
+                          onChange={(value) => updatePipelineForm({
+                            config: {
+                              ...pipelineForm.config,
+                              preprocessing: {
+                                ...pipelineForm.config.preprocessing,
+                                outlierMethod: value
+                              }
+                            }
+                          })}
+                        />
+                        <Slider
+                          label="Outlier Threshold"
+                          min={1}
+                          max={5}
+                          step={0.1}
+                          value={pipelineForm.config.preprocessing.outlierThreshold}
+                          onChange={(value) => updatePipelineForm({
+                            config: {
+                              ...pipelineForm.config,
+                              preprocessing: {
+                                ...pipelineForm.config.preprocessing,
+                                outlierThreshold: value
+                              }
+                            }
+                          })}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <Switch
-                  label="Correlation Analysis"
-                  checked={pipelineForm.enableCorrelation}
-                  onChange={(checked) =>
-                    setPipelineForm({ ...pipelineForm, enableCorrelation: checked })
-                  }
+                  label="Enable Scaling"
+                  checked={pipelineForm.config.preprocessing.scaling}
+                  onChange={(checked) => updatePipelineForm({
+                    config: {
+                      ...pipelineForm.config,
+                      preprocessing: {
+                        ...pipelineForm.config.preprocessing,
+                        scaling: checked
+                      }
+                    }
+                  })}
                 />
+
                 <Switch
-                  label="Feature Importance"
-                  checked={pipelineForm.enableFeatureImportance}
-                  onChange={(checked) =>
-                    setPipelineForm({ ...pipelineForm, enableFeatureImportance: checked })
-                  }
-                />
-                <Switch
-                  label="Generate Visualizations"
-                  checked={pipelineForm.enableVisualization}
-                  onChange={(checked) =>
-                    setPipelineForm({ ...pipelineForm, enableVisualization: checked })
-                  }
+                  label="Enable Feature Engineering"
+                  checked={pipelineForm.config.preprocessing.featureEngineering}
+                  onChange={(checked) => updatePipelineForm({
+                    config: {
+                      ...pipelineForm.config,
+                      preprocessing: {
+                        ...pipelineForm.config.preprocessing,
+                        featureEngineering: checked
+                      }
+                    }
+                  })}
                 />
               </div>
 
+              {/* Analysis Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Analysis Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Switch
+                    label="Correlation Analysis"
+                    checked={pipelineForm.config.analysis.performCorrelation}
+                    onChange={(checked) => updatePipelineForm({
+                      config: {
+                        ...pipelineForm.config,
+                        analysis: {
+                          ...pipelineForm.config.analysis,
+                          performCorrelation: checked
+                        }
+                      }
+                    })}
+                  />
+                  <Switch
+                    label="Feature Importance"
+                    checked={pipelineForm.config.analysis.enableFeatureImportance}
+                    onChange={(checked) => updatePipelineForm({
+                      config: {
+                        ...pipelineForm.config,
+                        analysis: {
+                          ...pipelineForm.config.analysis,
+                          enableFeatureImportance: checked
+                        }
+                      }
+                    })}
+                  />
+                  <Switch
+                    label="Generate Visualizations"
+                    checked={pipelineForm.config.analysis.generateVisualizations}
+                    onChange={(checked) => updatePipelineForm({
+                      config: {
+                        ...pipelineForm.config,
+                        analysis: {
+                          ...pipelineForm.config.analysis,
+                          generateVisualizations: checked
+                        }
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+
+              {/* Augmentation Settings */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Augmentation Settings</h3>
                 <Select
                   label="Method"
-                  options={augmentationMethods}
-                  value={pipelineForm.augmentationMethod}
-                  onChange={(value) =>
-                    setPipelineForm({ ...pipelineForm, augmentationMethod: value })
-                  }
+                  options={AUGMENTATION_METHODS}
+                  value={pipelineForm.config.augmentation.method}
+                  onChange={(value) => updatePipelineForm({
+                    config: {
+                      ...pipelineForm.config,
+                      augmentation: {
+                        ...pipelineForm.config.augmentation,
+                        method: value
+                      }
+                    }
+                  })}
                 />
-                {pipelineForm.augmentationMethod !== 'none' && (
+                {pipelineForm.config.augmentation.method !== 'none' && (
                   <Slider
                     label="Augmentation Factor"
                     min={0}
                     max={1}
                     step={0.1}
-                    value={pipelineForm.augmentationFactor}
-                    onChange={(value) =>
-                      setPipelineForm({ ...pipelineForm, augmentationFactor: value })
-                    }
+                    value={pipelineForm.config.augmentation.factor}
+                    onChange={(value) => updatePipelineForm({
+                      config: {
+                        ...pipelineForm.config,
+                        augmentation: {
+                          ...pipelineForm.config.augmentation,
+                          factor: value
+                        }
+                      }
+                    })}
                   />
                 )}
               </div>
 
-              <div className="flex justify-end">
-                <Button>Run Pipeline</Button>
+              <div className="flex justify-end space-x-4">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    resetPipelineForm();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreatePipeline}
+                  disabled={loading || !pipelineForm.datasetId}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Run Pipeline'
+                  )}
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Pipeline Status</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockPipelines.map((pipeline) => (
+      {/* Pipeline Status */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-semibold">Pipeline Status</h2>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {pipelines.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-gray-500 dark:text-gray-400">
+                  No pipelines found. Create your first pipeline!
+                </p>
+              </div>
+            ) : (
+              pipelines.map((pipeline) => (
                 <div
-                  key={pipeline.id}
+                  key={pipeline.pipeline_id}
                   className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-medium">{pipeline.name}</h3>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            pipeline.status === 'running'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          }`}
-                        >
-                          {pipeline.status}
-                        </span>
-                        {pipeline.status === 'running' && (
-                          <Button size="sm" variant="secondary">
-                            <Play className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
+                      <h3 className="text-lg font-medium">
+                        Pipeline #{pipeline.pipeline_id}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Dataset: {datasets.find(d => d.value === pipeline.dataset_id.toString())?.label}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${utils.getStatusColor(
+                          pipeline.status
+                        )}`}
+                      >
+                        {pipeline.status}
+                      </span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Progress</span>
-                      <span>{pipeline.progress}%</span>
+                      <span>{pipeline.status === 'completed' ? '100%' : '...'}</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${pipeline.progress}%` }}
+                        style={{
+                          width: pipeline.status === 'completed' ? '100%' : 
+                                pipeline.status === 'running' ? '75%' : '0%'
+                        }}
                       ></div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div className="flex items-center space-x-2 text-sm">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      <span>{pipeline.startTime}</span>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        <span>{new Date(pipeline.created_at).toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <Database className="w-4 h-4 text-gray-400" />
+                        <span>{utils.formatProcessedData(pipeline.results?.processed_rows)}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <BarChart2 className="w-4 h-4 text-gray-400" />
+                        <span>{utils.formatDuration(pipeline.execution_time)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      <span>{pipeline.duration}</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm">
-                      <AlertCircle className="w-4 h-4 text-gray-400" />
-                      <span>{pipeline.errors} errors</span>
+
+                    {pipeline.results && (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {pipeline.results.correlation_matrix && (
+                            <Card>
+                              <CardHeader>
+                                <h4 className="text-sm font-medium">Correlation Analysis</h4>
+                              </CardHeader>
+                              <CardContent>
+                              <MetricsVisualization
+                                  type="heatmap"
+                                  data={utils.transformCorrelationMatrix(pipeline.results.correlation_matrix)}
+                                  title="Feature Correlations"
+                                  height={250}
+                                />
+                              </CardContent>
+                            </Card>
+                          )}
+
+                          {pipeline.results.feature_importance && (
+                            <Card>
+                              <CardHeader>
+                                <h4 className="text-sm font-medium">Feature Importance</h4>
+                              </CardHeader>
+                              <CardContent>
+                                <MetricsVisualization
+                                  type="bar"
+                                  data={utils.transformFeatureImportance(pipeline.results.feature_importance)}
+                                  title="Feature Importance Scores"
+                                  xKey="feature"
+                                  yKey="importance"
+                                  height={250}
+                                />
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+
+                        {pipeline.results.data_quality_report && (
+                          <Card>
+                            <CardHeader>
+                              <h4 className="text-sm font-medium">Data Quality Report</h4>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-500">Missing Values</p>
+                                  <p className="text-lg font-medium">
+                                    {pipeline.results.data_quality_report.missing_values}%
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-500">Outliers Detected</p>
+                                  <p className="text-lg font-medium">
+                                    {pipeline.results.data_quality_report.outliers_count}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-500">Duplicate Rows</p>
+                                  <p className="text-lg font-medium">
+                                    {pipeline.results.data_quality_report.duplicate_rows}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-sm text-gray-500">Data Completeness</p>
+                                  <p className="text-lg font-medium">
+                                    {pipeline.results.data_quality_report.completeness}%
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    )}
+
+                    {pipeline.error_message && (
+                      <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="text-sm">{pipeline.error_message}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex justify-end space-x-2">
+                      {pipeline.status === 'completed' && pipeline.results?.download_url && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => window.location.href = pipeline.results!.download_url!}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Results
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRerunPipeline(pipeline.pipeline_id)}
+                        disabled={loading}
+                      >
+                        <RefreshCcw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Rerun Pipeline
+                      </Button>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
+export default PipelinePage;

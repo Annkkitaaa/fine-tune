@@ -1,0 +1,6 @@
+# Ignore virtual environment
+node_modules/
+
+# Ignore environment variables file
+.env
+

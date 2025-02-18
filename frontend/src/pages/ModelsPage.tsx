@@ -1,87 +1,95 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardContent } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
-import { Slider } from '../components/ui/Slider';
-import { Switch } from '../components/ui/Switch';
-import { Button } from '../components/ui/Button';
-import { Search, Plus, Filter } from 'lucide-react';
+// src/pages/ModelsPage.tsx
+import React, { useState, useEffect } from 'react';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Loader2, Plus, Search, Filter, AlertCircle } from 'lucide-react';
+import { useModels } from '@/hooks/useModels';
+import { ModelFormState } from '@/types/model.types';
+import { FRAMEWORKS, ARCHITECTURES, ACTIVATION_FUNCTIONS } from '@/constants/model.constants';
 
 export const ModelsPage: React.FC = () => {
+  const {
+    models,
+    loading,
+    error,
+    hasMore,
+    fetchModels,
+    createModel,
+    deleteModel,
+    loadMore
+  } = useModels({ pageSize: 50 });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [modelForm, setModelForm] = useState({
+  const [modelForm, setModelForm] = useState<ModelFormState>({
     name: '',
     description: '',
     framework: 'pytorch',
     architecture: 'resnet50',
     version: '1.0.0',
-    inputSize: [224, 224, 3],
-    numClasses: 1000,
-    batchSize: 32,
-    useGPU: true,
-    learningRate: 0.001,
-    optimizer: 'adam',
-    epochs: 100,
-    weightDecay: 0.0001,
-    momentum: 0.9,
-    scheduler: 'cosine',
-    earlyStoppingEnabled: true,
-    patience: 10,
-    minDelta: 0.001,
-    validationSplit: 0.2,
-    randomSeed: 42,
+    config: {
+      hidden_layers: [64, 32],
+      activation: 'relu',
+      dropout_rate: 0.2
+    }
   });
 
-  const frameworks = [
-    { value: 'pytorch', label: 'PyTorch' },
-    { value: 'tensorflow', label: 'TensorFlow' },
-    { value: 'jax', label: 'JAX' },
-  ];
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
 
-  const architectures = [
-    { value: 'resnet50', label: 'ResNet50' },
-    { value: 'vgg16', label: 'VGG16' },
-    { value: 'efficientnet', label: 'EfficientNet' },
-  ];
+  const handleCreateModel = async () => {
+    try {
+      await createModel(modelForm);
+      setShowCreateForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Failed to create model:', error);
+    }
+  };
 
-  const optimizers = [
-    { value: 'adam', label: 'Adam' },
-    { value: 'sgd', label: 'SGD' },
-    { value: 'adamw', label: 'AdamW' },
-  ];
+  const handleDeleteModel = async (modelId: number) => {
+    try {
+      await deleteModel(modelId);
+    } catch (error) {
+      console.error('Failed to delete model:', error);
+    }
+  };
 
-  const schedulers = [
-    { value: 'cosine', label: 'Cosine Annealing' },
-    { value: 'step', label: 'Step' },
-    { value: 'linear', label: 'Linear' },
-  ];
-
-  const mockModels = [
-    {
-      id: '1',
-      name: 'ResNet50 Classifier',
-      framework: 'PyTorch',
-      architecture: 'ResNet50',
+  const resetForm = () => {
+    setModelForm({
+      name: '',
+      description: '',
+      framework: 'pytorch',
+      architecture: 'resnet50',
       version: '1.0.0',
-      accuracy: 0.92,
-      status: 'trained',
-      updatedAt: '2024-03-15',
-    },
-    {
-      id: '2',
-      name: 'Object Detection v2',
-      framework: 'TensorFlow',
-      architecture: 'YOLO',
-      version: '2.1.0',
-      accuracy: 0.89,
-      status: 'training',
-      updatedAt: '2024-03-14',
-    },
-  ];
+      config: {
+        hidden_layers: [64, 32],
+        activation: 'relu',
+        dropout_rate: 0.2
+      }
+    });
+  };
+
+  const filteredModels = models?.filter(model => 
+    model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    model.framework.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    model.architecture.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  if (loading && !models?.length) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Models</h1>
         <Button onClick={() => setShowCreateForm(!showCreateForm)}>
@@ -89,6 +97,13 @@ export const ModelsPage: React.FC = () => {
           Create Model
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       {showCreateForm && (
         <Card className="mb-8">
@@ -98,7 +113,6 @@ export const ModelsPage: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-6">
-                <h3 className="text-lg font-medium">Basic Information</h3>
                 <Input
                   label="Name"
                   value={modelForm.name}
@@ -111,13 +125,13 @@ export const ModelsPage: React.FC = () => {
                 />
                 <Select
                   label="Framework"
-                  options={frameworks}
+                  options={FRAMEWORKS}
                   value={modelForm.framework}
                   onChange={(value) => setModelForm({ ...modelForm, framework: value })}
                 />
                 <Select
                   label="Architecture"
-                  options={architectures}
+                  options={ARCHITECTURES}
                   value={modelForm.architecture}
                   onChange={(value) => setModelForm({ ...modelForm, architecture: value })}
                 />
@@ -129,136 +143,60 @@ export const ModelsPage: React.FC = () => {
               </div>
 
               <div className="space-y-6">
-                <h3 className="text-lg font-medium">Configuration</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  {modelForm.inputSize.map((size, index) => (
-                    <Input
-                      key={index}
-                      label={`Input Size ${index + 1}`}
-                      type="number"
-                      value={size}
-                      onChange={(e) => {
-                        const newSizes = [...modelForm.inputSize];
-                        newSizes[index] = parseInt(e.target.value);
-                        setModelForm({ ...modelForm, inputSize: newSizes });
-                      }}
-                    />
-                  ))}
-                </div>
+                <h3 className="text-lg font-medium">Model Configuration</h3>
                 <Input
-                  label="Number of Classes"
+                  label="Hidden Layers"
+                  type="text"
+                  value={modelForm.config.hidden_layers.join(', ')}
+                  onChange={(e) => setModelForm({
+                    ...modelForm,
+                    config: {
+                      ...modelForm.config,
+                      hidden_layers: e.target.value.split(',').map(num => parseInt(num.trim()))
+                    }
+                  })}
+                  placeholder="64, 32"
+                />
+                <Select
+                  label="Activation Function"
+                  options={ACTIVATION_FUNCTIONS}
+                  value={modelForm.config.activation}
+                  onChange={(value) => setModelForm({
+                    ...modelForm,
+                    config: { ...modelForm.config, activation: value }
+                  })}
+                />
+                <Input
+                  label="Dropout Rate"
                   type="number"
-                  value={modelForm.numClasses}
-                  onChange={(e) => setModelForm({ ...modelForm, numClasses: parseInt(e.target.value) })}
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={modelForm.config.dropout_rate}
+                  onChange={(e) => setModelForm({
+                    ...modelForm,
+                    config: { ...modelForm.config, dropout_rate: parseFloat(e.target.value) }
+                  })}
                 />
-                <Slider
-                  label="Batch Size"
-                  min={16}
-                  max={128}
-                  step={16}
-                  value={modelForm.batchSize}
-                  onChange={(value) => setModelForm({ ...modelForm, batchSize: value })}
-                />
-                <Switch
-                  label="Use GPU"
-                  checked={modelForm.useGPU}
-                  onChange={(checked) => setModelForm({ ...modelForm, useGPU: checked })}
-                />
-              </div>
-
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium">Hyperparameters</h3>
-                <Slider
-                  label="Learning Rate"
-                  min={0.0001}
-                  max={0.1}
-                  step={0.0001}
-                  value={modelForm.learningRate}
-                  onChange={(value) => setModelForm({ ...modelForm, learningRate: value })}
-                />
-                <Select
-                  label="Optimizer"
-                  options={optimizers}
-                  value={modelForm.optimizer}
-                  onChange={(value) => setModelForm({ ...modelForm, optimizer: value })}
-                />
-                <Slider
-                  label="Epochs"
-                  min={1}
-                  max={500}
-                  value={modelForm.epochs}
-                  onChange={(value) => setModelForm({ ...modelForm, epochs: value })}
-                />
-                <Slider
-                  label="Weight Decay"
-                  min={0}
-                  max={1}
-                  step={0.0001}
-                  value={modelForm.weightDecay}
-                  onChange={(value) => setModelForm({ ...modelForm, weightDecay: value })}
-                />
-                <Slider
-                  label="Momentum"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={modelForm.momentum}
-                  onChange={(value) => setModelForm({ ...modelForm, momentum: value })}
-                />
-                <Select
-                  label="Scheduler"
-                  options={schedulers}
-                  value={modelForm.scheduler}
-                  onChange={(value) => setModelForm({ ...modelForm, scheduler: value })}
-                />
-              </div>
-
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium">Early Stopping</h3>
-                <Switch
-                  label="Enable Early Stopping"
-                  checked={modelForm.earlyStoppingEnabled}
-                  onChange={(checked) => setModelForm({ ...modelForm, earlyStoppingEnabled: checked })}
-                />
-                {modelForm.earlyStoppingEnabled && (
-                  <>
-                    <Input
-                      label="Patience"
-                      type="number"
-                      value={modelForm.patience}
-                      onChange={(e) => setModelForm({ ...modelForm, patience: parseInt(e.target.value) })}
-                    />
-                    <Slider
-                      label="Min Delta"
-                      min={0}
-                      max={1}
-                      step={0.001}
-                      value={modelForm.minDelta}
-                      onChange={(value) => setModelForm({ ...modelForm, minDelta: value })}
-                    />
-                    <Slider
-                      label="Validation Split"
-                      min={0}
-                      max={1}
-                      step={0.1}
-                      value={modelForm.validationSplit}
-                      onChange={(value) => setModelForm({ ...modelForm, validationSplit: value })}
-                    />
-                    <Input
-                      label="Random Seed"
-                      type="number"
-                      value={modelForm.randomSeed}
-                      onChange={(e) => setModelForm({ ...modelForm, randomSeed: parseInt(e.target.value) })}
-                    />
-                  </>
-                )}
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-4">
               <Button variant="secondary" onClick={() => setShowCreateForm(false)}>
                 Cancel
               </Button>
-              <Button>Create Model</Button>
+              <Button
+                onClick={handleCreateModel}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Model'
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -275,7 +213,7 @@ export const ModelsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+              </div>
             <Button variant="secondary">
               <Filter className="w-4 h-4 mr-2" />
               Filter
@@ -300,18 +238,15 @@ export const ModelsPage: React.FC = () => {
                     Version
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Accuracy
+                    Created At
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Last Updated
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {mockModels.map((model) => (
+                {filteredModels.map((model) => (
                   <tr key={model.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {model.name}
@@ -326,29 +261,59 @@ export const ModelsPage: React.FC = () => {
                       {model.version}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {(model.accuracy * 100).toFixed(1)}%
+                      {new Date(model.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          model.status === 'trained'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        }`}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mr-2"
+                        onClick={() => handleDeleteModel(model.id)}
+                        disabled={loading}
                       >
-                        {model.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {model.updatedAt}
+                        {loading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Delete'
+                        )}
+                      </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {hasMore && (
+              <div className="mt-4 text-center">
+                <Button 
+                  variant="secondary" 
+                  onClick={loadMore}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Loading More...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!loading && filteredModels.length === 0 && (
+              <div className="text-center py-6">
+                <p className="text-gray-500 dark:text-gray-400">
+                  No models found. {searchQuery ? 'Try a different search term.' : 'Create your first model!'}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 };
+
+export default ModelsPage;

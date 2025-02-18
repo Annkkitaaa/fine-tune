@@ -1,0 +1,87 @@
+// src/hooks/useDatasets.ts
+import { useState, useCallback } from 'react';
+import { Dataset } from '@/types';
+import { datasetsService } from '@/services/datasets.service';
+
+interface UseDatasetOptions {
+  initialPage?: number;
+  pageSize?: number;
+}
+
+export function useDatasets(options: UseDatasetOptions = {}) {
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(options.initialPage || 0);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchDatasets = useCallback(async (page = currentPage) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await datasetsService.getDatasets({
+        skip: page * (options.pageSize || 100),
+        limit: options.pageSize || 100,
+      });
+      
+      if (page === 0) {
+        setDatasets(response);
+      } else {
+        setDatasets(prev => [...prev, ...response]);
+      }
+      
+      setHasMore(response.length === (options.pageSize || 100));
+      setCurrentPage(page);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch datasets');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, options.pageSize]);
+
+  const uploadDataset = useCallback(async (formData: FormData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await datasetsService.uploadDataset(formData);
+      setDatasets(prev => [response, ...prev]);
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload dataset');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteDataset = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await datasetsService.deleteDataset(id);
+      setDatasets(prev => prev.filter(dataset => dataset.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete dataset');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      fetchDatasets(currentPage + 1);
+    }
+  }, [loading, hasMore, currentPage, fetchDatasets]);
+
+  return {
+    datasets,
+    loading,
+    error,
+    hasMore,
+    fetchDatasets,
+    uploadDataset,
+    deleteDataset,
+    loadMore,
+  };
+}

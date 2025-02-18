@@ -1,87 +1,162 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Database, BarChart2, Rocket, GitBranch, LineChart } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import {
+  Loader2,
+  AlertCircle,
+  Brain,
+  Database,
+  Rocket,
+  BarChart2,
+  LineChart,
+} from 'lucide-react';
+import { usePlatformDashboard } from '@/hooks/usePlatformDashboard';
 
 export const HomePage: React.FC = () => {
-  const features = [
-    {
-      name: 'Models',
-      description: 'Create, manage, and version your machine learning models',
-      icon: Brain,
-      href: '/models',
-    },
-    {
-      name: 'Datasets',
-      description: 'Upload, preprocess, and manage your training data',
-      icon: Database,
-      href: '/datasets',
-    },
-    {
-      name: 'Training',
-      description: 'Train models with advanced hyperparameter configuration',
-      icon: BarChart2,
-      href: '/training',
-    },
-    {
-      name: 'Deployment',
-      description: 'Deploy models to production with monitoring and scaling',
-      icon: Rocket,
-      href: '/deployment',
-    },
-    {
-      name: 'Pipeline',
-      description: 'Build end-to-end ML pipelines with automated workflows',
-      icon: GitBranch,
-      href: '/pipeline',
-    },
-    {
-      name: 'Evaluation',
-      description: 'Evaluate model performance with comprehensive metrics',
-      icon: LineChart,
-      href: '/evaluation',
-    },
-  ];
+  const {
+    loading,
+    error,
+    stats,
+    refresh
+  } = usePlatformDashboard();
+
+  if (loading && !stats) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="py-12">
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          Welcome to ML Platform
-        </h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-          A modern platform for machine learning model management, training, and deployment
-        </p>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">ML Platform Dashboard</h1>
+        <Button onClick={refresh} variant="outline" disabled={loading}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {features.map((feature) => {
-          const Icon = feature.icon;
-          return (
-            <Link
-              key={feature.name}
-              to={feature.href}
-              className="group relative bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-200 dark:border-gray-700"
-            >
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Platform Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Models</p>
+                <p className="text-2xl font-bold">{stats.models || 0}</p>
+              </div>
+              <Brain className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Datasets</p>
+                <p className="text-2xl font-bold">{stats.datasets || 0}</p>
+              </div>
+              <Database className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Deployments</p>
+                <p className="text-2xl font-bold">{stats.deployments || 0}</p>
+              </div>
+              <Rocket className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Training Jobs</p>
+                <p className="text-2xl font-bold">{stats.activeTraining || 0}</p>
+              </div>
+              <BarChart2 className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link to="/models">
+          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300">
-                    <Icon size={24} />
-                  </div>
-                </div>
+                <Brain className="w-6 h-6 text-blue-500" />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
-                    {feature.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">{feature.description}</p>
+                  <h3 className="font-medium">Create Model</h3>
+                  <p className="text-sm text-gray-500">Train a new ML model</p>
                 </div>
               </div>
-              <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="text-blue-600 dark:text-blue-400">→</div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/datasets">
+          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <Database className="w-6 h-6 text-green-500" />
+                <div>
+                  <h3 className="font-medium">Upload Dataset</h3>
+                  <p className="text-sm text-gray-500">Add new training data</p>
+                </div>
               </div>
-            </Link>
-          );
-        })}
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/deployment">
+          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <Rocket className="w-6 h-6 text-purple-500" />
+                <div>
+                  <h3 className="font-medium">Deploy Model</h3>
+                  <p className="text-sm text-gray-500">Deploy to production</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/evaluation">
+          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <LineChart className="w-6 h-6 text-orange-500" />
+                <div>
+                  <h3 className="font-medium">Evaluate Model</h3>
+                  <p className="text-sm text-gray-500">Test model performance</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
 };
+
+export default HomePage;
