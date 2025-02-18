@@ -1,8 +1,20 @@
 // src/lib/api-client.ts
-import axios, { AxiosError, AxiosInstance } from 'axios';
-import { HTTPValidationError, ValidationError } from '@/types/auth.types';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const TOKEN_KEY = 'access_token';
+
+interface ValidationError {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+  input?: any;
+}
+
+interface ApiErrorDetail {
+  detail?: ValidationError[] | string;
+  message?: string;
+}
 
 class ApiClient {
   private instance: AxiosInstance;
@@ -18,11 +30,11 @@ class ApiClient {
     this.setupInterceptors();
   }
 
-  private setupInterceptors() {
+  private setupInterceptors(): void {
     // Request interceptor
     this.instance.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem(TOKEN_KEY);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -35,7 +47,7 @@ class ApiClient {
 
     // Response interceptor
     this.instance.interceptors.response.use(
-      (response) => response.data,
+      (response) => response,
       (error) => {
         return Promise.reject(this.handleError(error));
       }
@@ -44,25 +56,33 @@ class ApiClient {
 
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<HTTPValidationError>;
+      const axiosError = error as AxiosError<ApiErrorDetail>;
       
-      // Handle FastAPI validation errors
-      if (axiosError.response?.status === 422) {
-        const validationErrors = axiosError.response.data.detail;
-        if (Array.isArray(validationErrors)) {
-          const messages = validationErrors
-            .map((err: ValidationError) => {
-              const field = err.loc[err.loc.length - 1];
-              return `${field}: ${err.msg}`;
-            })
-            .join(', ');
-          return new Error(messages);
-        }
-      }
+      // Handle validation errors array
+      if (axiosError.response?.data) {
+        const { data } = axiosError.response;
 
-      // Handle other error responses
-      if (axiosError.response?.data?.detail) {
-        return new Error(axiosError.response.data.detail);
+        // Handle array of validation errors
+        if (Array.isArray(data)) {
+          const messages = data
+            .map((err: ValidationError) => err.msg)
+            .filter(Boolean)
+            .join(', ');
+          return new Error(messages || 'Validation error occurred');
+        }
+
+        // Handle error with detail field
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            return new Error(data.detail.map(err => err.msg).join(', '));
+          }
+          return new Error(String(data.detail));
+        }
+
+        // Handle error with message field
+        if (data.message) {
+          return new Error(data.message);
+        }
       }
 
       // Handle specific status codes
@@ -70,13 +90,16 @@ class ApiClient {
         case 400:
           return new Error('Invalid request data');
         case 401:
+          localStorage.removeItem(TOKEN_KEY);
           return new Error('Please log in again');
         case 403:
           return new Error('You do not have permission');
         case 404:
           return new Error('Resource not found');
+        case 422:
+          return new Error('Validation error occurred');
         case 500:
-          return new Error('Server error, please try again later');
+          return new Error('Server error occurred');
         default:
           return new Error(axiosError.message || 'An error occurred');
       }
@@ -89,27 +112,81 @@ class ApiClient {
     return new Error('An unexpected error occurred');
   }
 
-  async request<T>(endpoint: string, options: any = {}): Promise<T> {
+  async request<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
-      const response = await this.instance({
+      const response: AxiosResponse<T> = await this.instance({
         url: endpoint,
         ...options,
       });
-      return response;
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  async get<T>(endpoint: string, config = {}): Promise<T> {
-    return this.request<T>(endpoint, { ...config, method: 'GET' });
+  async get<T>(
+    endpoint: string, 
+    options: Omit<AxiosRequestConfig, 'method'> = {}
+  ): Promise<T> {
+    return this.request<T>(endpoint, { 
+      ...options, 
+      method: 'GET' 
+    });
   }
 
-  async post<T>(endpoint: string, data = {}, config = {}): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    data?: any,
+    options: Omit<AxiosRequestConfig, 'method' | 'data'> = {}
+  ): Promise<T> {
     return this.request<T>(endpoint, {
-      ...config,
+      ...options,
       method: 'POST',
       data,
     });
   }
+
+  async put<T>(
+    endpoint: string,
+    data?: any,
+    options: Omit<AxiosRequestConfig, 'method' | 'data'> = {}
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      data,
+    });
+  }
+
+  async delete<T>(
+    endpoint: string,
+    options: Omit<AxiosRequestConfig, 'method'> = {}
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'DELETE',
+    });
+  }
+
+  async postForm<T>(
+    endpoint: string,
+    data: Record<string, any>,
+    options: Omit<AxiosRequestConfig, 'method' | 'data' | 'headers'> = {}
+  ): Promise<T> {
+    const formData = new URLSearchParams();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      data: formData,
+    });
+  }
 }
+
+export const apiClient = new ApiClient();

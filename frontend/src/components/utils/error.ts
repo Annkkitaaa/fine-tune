@@ -6,28 +6,51 @@ interface ValidationError {
     input?: any;
   }
   
-  export const formatError = (error: unknown): string => {
-    if (!error) return '';
+  interface ErrorResponse {
+    detail?: ValidationError[] | string;
+    message?: string;
+  }
   
-    // Handle array of validation errors
+  export const formatError = (error: unknown): string => {
+    if (!error) return 'An unknown error occurred';
+  
+    // Handle validation error array
     if (Array.isArray(error)) {
-      return error.map((err: ValidationError) => err.msg).join(', ');
+      return error
+        .map((err: ValidationError) => err.msg)
+        .filter(Boolean)
+        .join(', ');
     }
   
     // Handle error object
     if (typeof error === 'object' && error !== null) {
-      if ('detail' in error) {
-        const { detail } = error as { detail: ValidationError[] | string };
-        if (Array.isArray(detail)) {
-          return detail.map(err => err.msg).join(', ');
-        }
-        return String(detail);
-      }
+      const errorObj = error as ErrorResponse;
       
+      // Handle FastAPI validation errors
+      if (errorObj.detail) {
+        if (Array.isArray(errorObj.detail)) {
+          return errorObj.detail
+            .map(err => err.msg)
+            .join(', ');
+        }
+        return String(errorObj.detail);
+      }
+  
+      // Handle standard Error object
       if (error instanceof Error) {
         return error.message;
       }
+  
+      // Handle error with message property
+      if (errorObj.message) {
+        return errorObj.message;
+      }
     }
   
-    return String(error);
+    // Handle string error
+    if (typeof error === 'string') {
+      return error;
+    }
+  
+    return 'An unexpected error occurred';
   };
