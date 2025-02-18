@@ -1,20 +1,29 @@
 // src/hooks/useAuth.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import api from '../services/api.service';
-import { 
-  User, 
-  LoginResponse, 
-  LoginRequest, 
-  RegisterRequest, 
-  ValidationError 
-} from '../types/auth.types';
+import { apiClient } from '@/lib/api-client';
+
+interface User {
+  id: number;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_superuser: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface LoginResponse {
+  access_token: string;
+  token_type: string;
+}
 
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   loading: boolean;
   error: string | null;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
@@ -26,34 +35,43 @@ interface AuthState {
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
-      isAuthenticated: !!localStorage.getItem('access_token'),
+      isAuthenticated: false,
       user: null,
       loading: false,
       error: null,
+      token: localStorage.getItem('access_token'),
 
       checkAuth: async () => {
         try {
+          set({ loading: true, error: null });
+          
           const token = localStorage.getItem('access_token');
           if (!token) {
-            set({ isAuthenticated: false, user: null });
+            set({ 
+              isAuthenticated: false, 
+              user: null, 
+              token: null,
+              loading: false 
+            });
             return;
           }
 
-          set({ loading: true });
-          const response = await api.get<User>('/auth/me');
+          const user = await apiClient.get<User>('/auth/me');
           set({ 
             isAuthenticated: true, 
-            user: response.data,
+            user,
+            token,
             loading: false,
             error: null
           });
-        } catch (error: any) {
+        } catch (error) {
           localStorage.removeItem('access_token');
           set({ 
             isAuthenticated: false, 
-            user: null, 
+            user: null,
+            token: null,
             loading: false,
-            error: extractError(error)
+            error: null // Don't show error for auth check
           });
         }
       },
@@ -62,34 +80,41 @@ export const useAuth = create<AuthState>()(
         try {
           set({ loading: true, error: null });
           
-          const loginData: LoginRequest = {
-            username: email, // API expects username but we use email
-            password
-          };
-          
-          const response = await api.post<LoginResponse>('/auth/login', loginData);
-          
-          if (response.data.access_token) {
-            localStorage.setItem('access_token', response.data.access_token);
+          // Use form data for login as required by FastAPI
+          const response = await apiClient.postForm<LoginResponse>('/auth/login', {
+            username: email, // API expects username field
+            password,
+            grant_type: 'password'
+          });
+
+          if (response.access_token) {
+            localStorage.setItem('access_token', response.access_token);
             
-            // Fetch user details after successful login
-            const userResponse = await api.get<User>('/auth/me');
+            // Fetch user details
+            const user = await apiClient.get<User>('/auth/me');
             
             set({ 
-              isAuthenticated: true, 
-              user: userResponse.data,
+              isAuthenticated: true,
+              user,
+              token: response.access_token,
               loading: false,
               error: null
             });
           } else {
             throw new Error('No access token received');
           }
-        } catch (error: any) {
-          set({ 
-            isAuthenticated: false,
-            loading: false,
-            error: extractError(error)
-          });
+        } catch (error) {
+          localStorage.removeItem('access_token');
+          if (error instanceof Error) {
+            set({ 
+              isAuthenticated: false,
+              user: null,
+              token: null,
+              loading: false,
+              error: error.message
+            });
+            throw error;
+          }
           throw error;
         }
       },
@@ -98,21 +123,25 @@ export const useAuth = create<AuthState>()(
         try {
           set({ loading: true, error: null });
           
-          const registerData: RegisterRequest = {
+          await apiClient.post('/auth/register', {
             email,
             password,
             full_name: fullName
-          };
-          
-          await api.post('/auth/register', registerData);
-          
-          // After successful registration, login with the same credentials
-          await get().login(email, password);
-        } catch (error: any) {
+          });
+
+          // Don't auto-login after registration
           set({ 
             loading: false,
-            error: extractError(error)
+            error: null
           });
+        } catch (error) {
+          if (error instanceof Error) {
+            set({ 
+              loading: false,
+              error: error.message
+            });
+            throw error;
+          }
           throw error;
         }
       },
@@ -122,6 +151,7 @@ export const useAuth = create<AuthState>()(
         set({ 
           isAuthenticated: false, 
           user: null,
+          token: null,
           error: null,
           loading: false
         });
@@ -136,77 +166,11 @@ export const useAuth = create<AuthState>()(
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         user: state.user,
+        token: state.token,
       }),
     }
   )
 );
 
-// Enhanced error extraction function
-function extractError(error: any): string {
-  if (!error) return 'An unknown error occurred';
-
-  // Handle validation errors array
-  if (Array.isArray(error.response?.data)) {
-    const validationError = error.response.data[0] as ValidationError;
-    if (validationError?.msg && validationError?.loc) {
-      return `${validationError.msg} (${validationError.loc.join('.')})`;
-    }
-  }
-
-  // Handle detail field in response
-  if (error.response?.data?.detail) {
-    return error.response.data.detail;
-  }
-
-  // Handle direct error message
-  if (error.message) {
-    return error.message;
-  }
-
-  // Handle other error responses
-  if (error.response?.status === 401) {
-    return 'Authentication failed';
-  }
-  if (error.response?.status === 403) {
-    return 'Access denied';
-  }
-  if (error.response?.status === 404) {
-    return 'Resource not found';
-  }
-  if (error.response?.status === 422) {
-    return 'Invalid data provided';
-  }
-  if (error.response?.status >= 500) {
-    return 'Server error occurred';
-  }
-
-  return 'An unexpected error occurred';
-}
-
-// API interceptors
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // Clear auth state
-      const auth = useAuth.getState();
-      auth.logout();
-    }
-    return Promise.reject(error);
-  }
-);
-
+// Optionally export type
 export type AuthStore = ReturnType<typeof useAuth>;
