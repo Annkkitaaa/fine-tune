@@ -5,39 +5,67 @@ import { User } from '@/types/auth.types';
 import { authService } from '@/services/auth.service';
 
 interface AuthState {
-  token: string | null;
   user: User | null;
-  isLoading: boolean;
+  isAuthenticated: boolean;
+  loading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  checkAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
+export const useAuth = create<AuthState>()(
   persist(
-    (set) => ({
-      token: localStorage.getItem('auth_token'),
+    (set, get) => ({
       user: null,
-      isLoading: false,
+      isAuthenticated: false,
+      loading: false,
       error: null,
+
+      checkAuth: async () => {
+        try {
+          if (!localStorage.getItem('access_token')) {
+            set({ isAuthenticated: false, user: null });
+            return;
+          }
+
+          set({ loading: true });
+          const user = await authService.getCurrentUser();
+          set({ 
+            isAuthenticated: true, 
+            user,
+            loading: false,
+            error: null
+          });
+        } catch (error) {
+          set({ 
+            isAuthenticated: false, 
+            user: null,
+            loading: false,
+            error: null // Don't show error for auth check
+          });
+        }
+      },
 
       login: async (username: string, password: string) => {
         try {
-          set({ isLoading: true, error: null });
-          const response = await authService.login(username, password);
+          set({ loading: true, error: null });
+          await authService.login(username, password);
+          const user = await authService.getCurrentUser();
           set({ 
-            token: response.access_token,
-            isLoading: false,
+            isAuthenticated: true,
+            user,
+            loading: false,
             error: null
           });
         } catch (error: any) {
-          set({
-            error: error.message || 'Login failed',
-            isLoading: false,
-            token: null,
+          set({ 
+            isAuthenticated: false,
             user: null,
+            loading: false,
+            error: error.message
           });
           throw error;
         }
@@ -45,17 +73,13 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (email: string, password: string, fullName: string) => {
         try {
-          set({ isLoading: true, error: null });
+          set({ loading: true, error: null });
           await authService.register(email, password, fullName);
-          // Registration successful - but don't auto-login
-          set({ 
-            isLoading: false,
-            error: null
-          });
+          set({ loading: false });
         } catch (error: any) {
-          set({
-            error: error.message || 'Registration failed',
-            isLoading: false,
+          set({ 
+            loading: false,
+            error: error.message
           });
           throw error;
         }
@@ -63,8 +87,11 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         authService.logout();
-        set({ token: null, user: null, error: null });
-        localStorage.removeItem('auth_token');
+        set({ 
+          isAuthenticated: false, 
+          user: null,
+          error: null
+        });
       },
 
       clearError: () => set({ error: null }),
@@ -72,7 +99,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+        user: state.user,
       }),
     }
   )
