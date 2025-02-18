@@ -20,7 +20,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   
   const [formData, setFormData] = useState({
     signIn: {
-      username: '',
+      email: '',
       password: '',
     },
     register: {
@@ -38,7 +38,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const resetForms = useCallback(() => {
     setFormData({
-      signIn: { username: '', password: '' },
+      signIn: { email: '', password: '' },
       register: { email: '', password: '', confirmPassword: '', fullName: '' }
     });
     setFormErrors({ signIn: '', register: '' });
@@ -67,24 +67,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { username, password } = formData.signIn;
+    const { email, password } = formData.signIn;
     
     // Clear previous errors
     setFormErrors(prev => ({ ...prev, signIn: '' }));
     clearError();
 
-    if (!username || !password) {
+    if (!email || !password) {
       setFormErrors(prev => ({ ...prev, signIn: 'Please fill in all fields' }));
       return;
     }
 
     try {
-      // Use email as username for consistency with backend
-      await login(username, password);
+      await login(email, password);
       onClose();
     } catch (err: any) {
-      // Error is already handled by the auth store
-      const errorMessage = err?.message || 'An error occurred during sign in';
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'An error occurred during sign in';
       setFormErrors(prev => ({ ...prev, signIn: errorMessage }));
     }
   };
@@ -130,7 +130,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }, 2000);
     } catch (err: any) {
       setRegistrationSuccess(false);
-      const errorMessage = err?.message || 'An error occurred during registration';
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'An error occurred during registration';
       setFormErrors(prev => ({ ...prev, register: errorMessage }));
     }
   };
@@ -142,9 +144,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const getErrorMessage = (tabError: string, formError: string): string => {
-    // Prioritize form errors over general errors
-    return formError || (typeof tabError === 'string' ? tabError : '');
+  const renderError = (errorMessage: unknown, formError: string) => {
+    const message = formError || (errorMessage instanceof Error ? errorMessage.message : String(errorMessage));
+    
+    if (!message) return null;
+    
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          {message}
+        </AlertDescription>
+      </Alert>
+    );
   };
 
   return (
@@ -181,23 +193,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {activeTab === 'signin' ? (
             <form onSubmit={handleSignIn}>
               <CardContent className="space-y-4">
-                {getErrorMessage(error, formErrors.signIn) && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {getErrorMessage(error, formErrors.signIn)}
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {renderError(error, formErrors.signIn)}
                 
                 <div className="space-y-2">
                   <Input
                     label="Email"
                     type="email"
-                    value={formData.signIn.username}
+                    value={formData.signIn.email}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      signIn: { ...prev.signIn, username: e.target.value }
+                      signIn: { ...prev.signIn, email: e.target.value }
                     }))}
                     placeholder="Enter your email"
                     required
@@ -254,14 +259,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </Alert>
                 )}
                 
-                {getErrorMessage(error, formErrors.register) && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {getErrorMessage(error, formErrors.register)}
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {renderError(error, formErrors.register)}
                 
                 <div className="space-y-2">
                   <Input
