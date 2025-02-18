@@ -1,161 +1,155 @@
 // src/store/auth.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User } from '@/types/auth.types';
 import { authService } from '@/services/auth.service';
-import { AxiosError } from 'axios';
+import { formatError } from '@/components/utils/error';
 
-interface ValidationError {
-  loc: string[];
-  msg: string;
-  type: string;
-  input?: any;
+interface User {
+  id: number;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_superuser: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface AuthState {
-  user: User | null;
   isAuthenticated: boolean;
+  user: User | null;
   loading: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   checkAuth: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
-
-const extractErrorMessage = (error: unknown): string => {
-  if (error instanceof AxiosError) {
-    const response = error.response?.data;
-    
-    // Handle array of validation errors
-    if (Array.isArray(response)) {
-      return response
-        .map((err: ValidationError) => err.msg)
-        .filter(Boolean)
-        .join(', ');
-    }
-    
-    // Handle single error object
-    if (response?.detail) {
-      return typeof response.detail === 'string' 
-        ? response.detail 
-        : 'Validation error occurred';
-    }
-
-    // Handle error message
-    if (response?.message) {
-      return response.message;
-    }
-
-    // Handle status code specific messages
-    switch (error.response?.status) {
-      case 400:
-        return 'Invalid request data';
-      case 401:
-        return 'Authentication failed';
-      case 422:
-        return 'Invalid input data';
-      default:
-        return error.message || 'An error occurred';
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'An unexpected error occurred';
-};
 
 export const useAuth = create<AuthState>()(
   persist(
-    (set) => ({
-      user: null,
+    (set, get) => ({
       isAuthenticated: false,
+      user: null,
       loading: false,
       error: null,
+      token: localStorage.getItem('access_token'),
+
+      clearError: () => set({ error: null }),
+
+      updateUser: (user: User) => set({ user }),
 
       checkAuth: async () => {
         try {
-          if (!localStorage.getItem('access_token')) {
-            set({ isAuthenticated: false, user: null });
+          set({ loading: true, error: null });
+          
+          const token = localStorage.getItem('access_token');
+          if (!token) {
+            set({ 
+              isAuthenticated: false, 
+              user: null,
+              loading: false,
+              token: null,
+              error: null 
+            });
             return;
           }
 
-          set({ loading: true });
           const user = await authService.getCurrentUser();
           set({ 
             isAuthenticated: true, 
             user,
             loading: false,
+            token,
             error: null
           });
         } catch (error) {
+          localStorage.removeItem('access_token');
           set({ 
             isAuthenticated: false, 
             user: null,
             loading: false,
-            error: null // Don't show error for auth check
+            token: null,
+            error: formatError(error)
           });
         }
       },
 
-      login: async (username: string, password: string) => {
+      login: async (email: string, password: string) => {
         try {
           set({ loading: true, error: null });
-          const response = await authService.login(username, password);
-          const user = await authService.getCurrentUser();
-          set({ 
-            isAuthenticated: true,
-            user,
-            loading: false,
-            error: null
-          });
-          return response;
+          
+          const response = await authService.login(email, password);
+          if (response.access_token) {
+            localStorage.setItem('access_token', response.access_token);
+            
+            // Fetch user details after successful login
+            const user = await authService.getCurrentUser();
+            
+            set({ 
+              isAuthenticated: true,
+              user,
+              token: response.access_token,
+              loading: false,
+              error: null
+            });
+          } else {
+            throw new Error('No access token received');
+          }
         } catch (error) {
-          const errorMessage = extractErrorMessage(error);
+          localStorage.removeItem('access_token');
           set({ 
             isAuthenticated: false,
             user: null,
+            token: null,
             loading: false,
-            error: errorMessage
+            error: formatError(error)
           });
-          throw new Error(errorMessage);
+          throw error;
         }
       },
 
       register: async (email: string, password: string, fullName: string) => {
         try {
           set({ loading: true, error: null });
+          
           await authService.register(email, password, fullName);
-          set({ loading: false, error: null });
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error);
+          
+          // Optionally auto-login after registration
+          // await get().login(email, password);
+          
           set({ 
             loading: false,
-            error: errorMessage
+            error: null
           });
-          throw new Error(errorMessage);
+        } catch (error) {
+          set({ 
+            loading: false,
+            error: formatError(error)
+          });
+          throw error;
         }
       },
 
       logout: () => {
-        authService.logout();
+        localStorage.removeItem('access_token');
         set({ 
           isAuthenticated: false, 
           user: null,
-          error: null
+          token: null,
+          error: null,
+          loading: false
         });
       },
-
-      clearError: () => set({ error: null }),
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         user: state.user,
+        token: state.token,
       }),
     }
   )
