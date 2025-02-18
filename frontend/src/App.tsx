@@ -4,10 +4,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Navbar } from './components/layout/Navbar';
 import { useThemeStore } from './store/theme';
 import { useAuth } from './hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthModal } from './components/auth/AuthModal';
 import { Alert, AlertDescription } from './components/ui/Alert';
+import { formatError } from './components/utils/error';
 
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -24,7 +25,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// ProtectedRoute component
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
@@ -44,7 +44,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-// AppRoutes component to handle route configuration
 const AppRoutes = () => {
   const location = useLocation();
   const { error } = useAuth();
@@ -53,7 +52,10 @@ const AppRoutes = () => {
     <>
       {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {formatError(error)}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -114,15 +116,12 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Show AuthModal if not authenticated and trying to access protected route */}
       <AuthModal
         isOpen={location.state?.from !== undefined}
         onClose={() => {
-          // Clear the location state when closing the modal
           window.history.replaceState({}, document.title);
         }}
       />
@@ -134,7 +133,6 @@ function App() {
   const { theme } = useThemeStore();
   const { checkAuth } = useAuth();
 
-  // Check authentication status on app load
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
