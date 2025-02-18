@@ -4,13 +4,8 @@ import { persist } from 'zustand/middleware';
 import { apiClient } from '@/lib/api-client';
 
 interface User {
-  id: number;
   email: string;
   full_name: string | null;
-  is_active: boolean;
-  is_superuser: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 interface LoginResponse {
@@ -28,61 +23,42 @@ interface AuthState {
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
-  checkAuth: () => Promise<void>;
+  checkAuth: () => void;
   updateUser: (user: User) => void;
 }
 
 export const useAuth = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isAuthenticated: false,
       user: null,
       loading: false,
       error: null,
       token: localStorage.getItem('access_token'),
 
-      checkAuth: async () => {
-        try {
-          set({ loading: true, error: null });
-          
-          const token = localStorage.getItem('access_token');
-          if (!token) {
-            set({ 
-              isAuthenticated: false, 
-              user: null, 
-              token: null,
-              loading: false 
-            });
-            return;
-          }
-
-          const user = await apiClient.get<User>('/auth/me');
-          set({ 
-            isAuthenticated: true, 
-            user,
-            token,
-            loading: false,
-            error: null
-          });
-        } catch (error) {
-          localStorage.removeItem('access_token');
+      checkAuth: () => {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
           set({ 
             isAuthenticated: false, 
             user: null,
-            token: null,
-            loading: false,
-            error: null // Don't show error for auth check
+            token: null
           });
+          return;
         }
+
+        set({ 
+          isAuthenticated: true,
+          token
+        });
       },
 
       login: async (email: string, password: string) => {
         try {
           set({ loading: true, error: null });
           
-          // Use form data for login as required by FastAPI
-          const response = await apiClient.postForm<LoginResponse>('/auth/login', {
-            username: email, // API expects username field
+          const response = await apiClient.postForm<LoginResponse>('/api/v1/auth/login', {
+            username: email,
             password,
             grant_type: 'password'
           });
@@ -90,8 +66,11 @@ export const useAuth = create<AuthState>()(
           if (response.access_token) {
             localStorage.setItem('access_token', response.access_token);
             
-            // Fetch user details
-            const user = await apiClient.get<User>('/auth/me');
+            // Create user object from login data
+            const user: User = {
+              email,
+              full_name: null // Can be updated later if needed
+            };
             
             set({ 
               isAuthenticated: true,
@@ -113,7 +92,6 @@ export const useAuth = create<AuthState>()(
               loading: false,
               error: error.message
             });
-            throw error;
           }
           throw error;
         }
@@ -123,13 +101,12 @@ export const useAuth = create<AuthState>()(
         try {
           set({ loading: true, error: null });
           
-          await apiClient.post('/auth/register', {
+          await apiClient.post('/api/v1/auth/register', {
             email,
             password,
             full_name: fullName
           });
 
-          // Don't auto-login after registration
           set({ 
             loading: false,
             error: null
@@ -140,7 +117,6 @@ export const useAuth = create<AuthState>()(
               loading: false,
               error: error.message
             });
-            throw error;
           }
           throw error;
         }
@@ -171,6 +147,3 @@ export const useAuth = create<AuthState>()(
     }
   )
 );
-
-// Optionally export type
-export type AuthStore = ReturnType<typeof useAuth>;
