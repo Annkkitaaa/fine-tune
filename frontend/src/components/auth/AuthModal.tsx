@@ -250,7 +250,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      {typeof error === 'string' ? error : formErrors.register}
+                      {error || formErrors.register}
                     </AlertDescription>
                   </Alert>
                 )}
