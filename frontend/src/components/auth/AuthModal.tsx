@@ -1,3 +1,4 @@
+// src/components/auth/AuthModal.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -5,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/Card';
 import { useAuth } from '@/hooks/useAuth';
+import { formatError } from '@/components/utils/error';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -69,7 +71,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     const { email, password } = formData.signIn;
     
-    // Clear previous errors
     setFormErrors(prev => ({ ...prev, signIn: '' }));
     clearError();
 
@@ -81,10 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       await login(email, password);
       onClose();
-    } catch (err: any) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : 'An error occurred during sign in';
+    } catch (err) {
+      const errorMessage = formatError(err);
       setFormErrors(prev => ({ ...prev, signIn: errorMessage }));
     }
   };
@@ -93,29 +92,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     const { email, password, confirmPassword, fullName } = formData.register;
     
-    // Clear previous errors
     setFormErrors(prev => ({ ...prev, register: '' }));
     clearError();
 
     try {
-      // Validate all fields are filled
       if (!email || !password || !confirmPassword || !fullName) {
         throw new Error('Please fill in all fields');
       }
 
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         throw new Error('Please enter a valid email address');
       }
 
-      // Validate password
       const passwordError = validatePassword(password);
       if (passwordError) {
         throw new Error(passwordError);
       }
 
-      // Validate password confirmation
       if (password !== confirmPassword) {
         throw new Error('Passwords do not match');
       }
@@ -123,16 +117,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       await register(email, password, fullName);
       setRegistrationSuccess(true);
       
-      // Switch to sign in after successful registration
       setTimeout(() => {
         setActiveTab('signin');
         resetForms();
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       setRegistrationSuccess(false);
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : 'An error occurred during registration';
+      const errorMessage = formatError(err);
       setFormErrors(prev => ({ ...prev, register: errorMessage }));
     }
   };
@@ -144,8 +135,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const renderError = (errorMessage: unknown, formError: string) => {
-    const message = formError || (errorMessage instanceof Error ? errorMessage.message : String(errorMessage));
+  const renderError = (error: unknown, formError: string) => {
+    const message = formatError(error) || formError;
     
     if (!message) return null;
     
@@ -255,7 +246,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                     <AlertDescription>
                       Registration successful! Redirecting to sign in...
-                    </AlertDescription>
+                      </AlertDescription>
                   </Alert>
                 )}
                 
