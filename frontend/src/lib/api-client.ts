@@ -1,14 +1,8 @@
 // src/lib/api-client.ts
 import axios, { AxiosError, AxiosInstance } from 'axios';
+import { HTTPValidationError, ValidationError } from '@/types/auth.types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-
-interface ValidationError {
-  loc: string[];
-  msg: string;
-  type: string;
-  input?: any;
-}
 
 class ApiClient {
   private instance: AxiosInstance;
@@ -50,33 +44,39 @@ class ApiClient {
 
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<any>;
+      const axiosError = error as AxiosError<HTTPValidationError>;
       
-      // Handle validation errors array
-      if (Array.isArray(axiosError.response?.data)) {
-        const validationErrors = axiosError.response?.data as ValidationError[];
-        const messages = validationErrors.map(err => err.msg).join(', ');
-        return new Error(messages);
+      // Handle FastAPI validation errors
+      if (axiosError.response?.status === 422) {
+        const validationErrors = axiosError.response.data.detail;
+        if (Array.isArray(validationErrors)) {
+          const messages = validationErrors
+            .map((err: ValidationError) => {
+              const field = err.loc[err.loc.length - 1];
+              return `${field}: ${err.msg}`;
+            })
+            .join(', ');
+          return new Error(messages);
+        }
       }
 
-      // Handle object with detail field
+      // Handle other error responses
       if (axiosError.response?.data?.detail) {
-        const detail = axiosError.response.data.detail;
-        return new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        return new Error(axiosError.response.data.detail);
       }
 
       // Handle specific status codes
       switch (axiosError.response?.status) {
         case 400:
-          return new Error('Bad Request: Invalid data provided');
+          return new Error('Invalid request data');
         case 401:
-          return new Error('Unauthorized: Please log in again');
+          return new Error('Please log in again');
         case 403:
-          return new Error('Forbidden: You do not have permission');
-        case 422:
-          return new Error('Validation Error: Please check your input');
+          return new Error('You do not have permission');
+        case 404:
+          return new Error('Resource not found');
         case 500:
-          return new Error('Server Error: Please try again later');
+          return new Error('Server error, please try again later');
         default:
           return new Error(axiosError.message || 'An error occurred');
       }
@@ -101,7 +101,6 @@ class ApiClient {
     }
   }
 
-  // Helper methods for common HTTP methods
   async get<T>(endpoint: string, config = {}): Promise<T> {
     return this.request<T>(endpoint, { ...config, method: 'GET' });
   }
@@ -113,21 +112,4 @@ class ApiClient {
       data,
     });
   }
-
-  async put<T>(endpoint: string, data = {}, config = {}): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...config,
-      method: 'PUT',
-      data,
-    });
-  }
-
-  async delete<T>(endpoint: string, config = {}): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...config,
-      method: 'DELETE',
-    });
-  }
 }
-
-export const apiClient = new ApiClient();
