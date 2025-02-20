@@ -1,20 +1,13 @@
 // src/lib/api-client.ts
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const TOKEN_KEY = 'access_token';
 
-interface ValidationError {
-  loc: (string | number)[];
-  msg: string;
-  type: string;
-  input?: any;
-}
-
-interface ApiErrorDetail {
-  detail?: ValidationError[] | string;
-  message?: string;
-}
+export const AUTH_ENDPOINTS = {
+  LOGIN: '/auth/login',
+  REGISTER: '/auth/register'
+};
 
 class ApiClient {
   private instance: AxiosInstance;
@@ -30,8 +23,7 @@ class ApiClient {
     this.setupInterceptors();
   }
 
-  private setupInterceptors(): void {
-    // Request interceptor
+  private setupInterceptors() {
     this.instance.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem(TOKEN_KEY);
@@ -41,14 +33,18 @@ class ApiClient {
         return config;
       },
       (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(this.handleError(error));
       }
     );
 
-    // Response interceptor
     this.instance.interceptors.response.use(
-      (response) => response,
+      (response) => response.data,
       (error) => {
+        console.error('Response error:', {
+          status: error.response?.status,
+          data: error.response?.data
+        });
         return Promise.reject(this.handleError(error));
       }
     );
@@ -56,36 +52,26 @@ class ApiClient {
 
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<ApiErrorDetail>;
+      const axiosError = error as AxiosError<any>;
       
-      // Handle validation errors array
       if (axiosError.response?.data) {
-        const { data } = axiosError.response;
-
-        // Handle array of validation errors
-        if (Array.isArray(data)) {
-          const messages = data
-            .map((err: ValidationError) => err.msg)
+        if (Array.isArray(axiosError.response.data)) {
+          const messages = axiosError.response.data
+            .map((err) => err.msg)
             .filter(Boolean)
             .join(', ');
           return new Error(messages || 'Validation error occurred');
         }
 
-        // Handle error with detail field
-        if (data.detail) {
-          if (Array.isArray(data.detail)) {
-            return new Error(data.detail.map(err => err.msg).join(', '));
-          }
-          return new Error(String(data.detail));
-        }
-
-        // Handle error with message field
-        if (data.message) {
-          return new Error(data.message);
+        if (axiosError.response.data.detail) {
+          return new Error(
+            typeof axiosError.response.data.detail === 'string'
+              ? axiosError.response.data.detail
+              : JSON.stringify(axiosError.response.data.detail)
+          );
         }
       }
 
-      // Handle specific status codes
       switch (axiosError.response?.status) {
         case 400:
           return new Error('Invalid request data');
@@ -105,73 +91,44 @@ class ApiClient {
       }
     }
 
-    if (error instanceof Error) {
-      return error;
-    }
-
     return new Error('An unexpected error occurred');
   }
 
   async request<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
-      const response: AxiosResponse<T> = await this.instance({
+      const response = await this.instance.request({
         url: endpoint,
-        ...options,
+        ...options
       });
-      return response.data;
+      return response.data; // ✅ Fix: Return only response data
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  async get<T>(
-    endpoint: string, 
-    options: Omit<AxiosRequestConfig, 'method'> = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, { 
-      ...options, 
-      method: 'GET' 
+  async get<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...config,
+      method: 'GET'
     });
   }
 
   async post<T>(
     endpoint: string,
     data?: any,
-    options: Omit<AxiosRequestConfig, 'method' | 'data'> = {}
+    config: AxiosRequestConfig = {}
   ): Promise<T> {
     return this.request<T>(endpoint, {
-      ...options,
+      ...config,
       method: 'POST',
-      data,
-    });
-  }
-
-  async put<T>(
-    endpoint: string,
-    data?: any,
-    options: Omit<AxiosRequestConfig, 'method' | 'data'> = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'PUT',
-      data,
-    });
-  }
-
-  async delete<T>(
-    endpoint: string,
-    options: Omit<AxiosRequestConfig, 'method'> = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: 'DELETE',
+      data
     });
   }
 
   async postForm<T>(
     endpoint: string,
     data: Record<string, any>,
-    options: Omit<AxiosRequestConfig, 'method' | 'data' | 'headers'> = {}
+    config: AxiosRequestConfig = {}
   ): Promise<T> {
     const formData = new URLSearchParams();
     Object.entries(data).forEach(([key, value]) => {
@@ -179,7 +136,7 @@ class ApiClient {
     });
 
     return this.request<T>(endpoint, {
-      ...options,
+      ...config,
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

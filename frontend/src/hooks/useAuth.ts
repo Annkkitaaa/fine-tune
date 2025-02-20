@@ -1,7 +1,7 @@
 // src/hooks/useAuth.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, AUTH_ENDPOINTS } from '@/lib/api-client';
 
 interface User {
   email: string;
@@ -24,7 +24,6 @@ interface AuthState {
   logout: () => void;
   clearError: () => void;
   checkAuth: () => void;
-  updateUser: (user: User) => void;
 }
 
 export const useAuth = create<AuthState>()(
@@ -36,40 +35,31 @@ export const useAuth = create<AuthState>()(
       error: null,
       token: localStorage.getItem('access_token'),
 
-      checkAuth: () => {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          set({ 
-            isAuthenticated: false, 
-            user: null,
-            token: null
-          });
-          return;
-        }
-
-        set({ 
-          isAuthenticated: true,
-          token
-        });
-      },
-
       login: async (email: string, password: string) => {
         try {
           set({ loading: true, error: null });
           
-          const response = await apiClient.postForm<LoginResponse>('/api/v1/auth/login', {
-            username: email,
-            password,
-            grant_type: 'password'
+          const formData = new URLSearchParams();
+          formData.append('username', email);
+          formData.append('password', password);
+          formData.append('grant_type', 'password');
+
+          const response = await apiClient.request<LoginResponse>(AUTH_ENDPOINTS.LOGIN, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            data: formData
           });
 
-          if (response.access_token) {
+          // Check if we have a valid response with access_token
+          if (response && response.access_token) {
             localStorage.setItem('access_token', response.access_token);
             
             // Create user object from login data
             const user: User = {
               email,
-              full_name: null // Can be updated later if needed
+              full_name: null
             };
             
             set({ 
@@ -80,19 +70,18 @@ export const useAuth = create<AuthState>()(
               error: null
             });
           } else {
-            throw new Error('No access token received');
+            throw new Error('Invalid login response');
           }
         } catch (error) {
           localStorage.removeItem('access_token');
-          if (error instanceof Error) {
-            set({ 
-              isAuthenticated: false,
-              user: null,
-              token: null,
-              loading: false,
-              error: error.message
-            });
-          }
+          const errorMessage = error instanceof Error ? error.message : 'Login failed';
+          set({ 
+            isAuthenticated: false,
+            user: null,
+            token: null,
+            loading: false,
+            error: errorMessage
+          });
           throw error;
         }
       },
@@ -101,23 +90,22 @@ export const useAuth = create<AuthState>()(
         try {
           set({ loading: true, error: null });
           
-          await apiClient.post('/api/v1/auth/register', {
-            email,
-            password,
-            full_name: fullName
+          await apiClient.request(AUTH_ENDPOINTS.REGISTER, {
+            method: 'POST',
+            data: {
+              email,
+              password,
+              full_name: fullName
+            }
           });
 
+          set({ loading: false, error: null });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Registration failed';
           set({ 
             loading: false,
-            error: null
+            error: errorMessage
           });
-        } catch (error) {
-          if (error instanceof Error) {
-            set({ 
-              loading: false,
-              error: error.message
-            });
-          }
           throw error;
         }
       },
@@ -135,7 +123,22 @@ export const useAuth = create<AuthState>()(
 
       clearError: () => set({ error: null }),
 
-      updateUser: (user: User) => set({ user }),
+      checkAuth: () => {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          set({ 
+            isAuthenticated: false, 
+            user: null,
+            token: null
+          });
+          return;
+        }
+
+        set({ 
+          isAuthenticated: true,
+          token
+        });
+      },
     }),
     {
       name: 'auth-storage',
