@@ -33,7 +33,6 @@ class ApiClient {
         return config;
       },
       (error) => {
-        console.error('Request interceptor error:', error);
         return Promise.reject(this.handleError(error));
       }
     );
@@ -41,10 +40,6 @@ class ApiClient {
     this.instance.interceptors.response.use(
       (response) => response.data,
       (error) => {
-        console.error('Response error:', {
-          status: error.response?.status,
-          data: error.response?.data
-        });
         return Promise.reject(this.handleError(error));
       }
     );
@@ -55,23 +50,23 @@ class ApiClient {
       const axiosError = error as AxiosError<any>;
       
       if (axiosError.response?.data) {
+        // Handle validation errors array
         if (Array.isArray(axiosError.response.data)) {
-          const messages = axiosError.response.data
-            .map((err) => err.msg)
-            .filter(Boolean)
-            .join(', ');
-          return new Error(messages || 'Validation error occurred');
+          return new Error(
+            axiosError.response.data
+              .map((err) => err.msg)
+              .filter(Boolean)
+              .join(', ')
+          );
         }
 
+        // Handle error with detail field
         if (axiosError.response.data.detail) {
-          return new Error(
-            typeof axiosError.response.data.detail === 'string'
-              ? axiosError.response.data.detail
-              : JSON.stringify(axiosError.response.data.detail)
-          );
+          return new Error(String(axiosError.response.data.detail));
         }
       }
 
+      // Handle specific status codes
       switch (axiosError.response?.status) {
         case 400:
           return new Error('Invalid request data');
@@ -83,7 +78,7 @@ class ApiClient {
         case 404:
           return new Error('Resource not found');
         case 422:
-          return new Error('Validation error occurred');
+          return new Error('Invalid input data');
         case 500:
           return new Error('Server error occurred');
         default:
@@ -94,55 +89,16 @@ class ApiClient {
     return new Error('An unexpected error occurred');
   }
 
-  async request<T>(endpoint: string, options: AxiosRequestConfig = {}): Promise<T> {
+  async request<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
     try {
-      const response = await this.instance.request({
+      const response = await this.instance.request<any, T>({
         url: endpoint,
-        ...options
+        ...config,
       });
-      return response.data; // ✅ Fix: Return only response data
+      return response;
     } catch (error) {
       throw this.handleError(error);
     }
-  }
-
-  async get<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...config,
-      method: 'GET'
-    });
-  }
-
-  async post<T>(
-    endpoint: string,
-    data?: any,
-    config: AxiosRequestConfig = {}
-  ): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...config,
-      method: 'POST',
-      data
-    });
-  }
-
-  async postForm<T>(
-    endpoint: string,
-    data: Record<string, any>,
-    config: AxiosRequestConfig = {}
-  ): Promise<T> {
-    const formData = new URLSearchParams();
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
-
-    return this.request<T>(endpoint, {
-      ...config,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      data: formData,
-    });
   }
 }
 
