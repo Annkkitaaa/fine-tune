@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/Slider';
 import { Alert, AlertDescription} from '@/components/ui/Alert';
 import { Loader2, Upload, Search, Filter, AlertCircle } from 'lucide-react';
 import { useDatasets } from '@/hooks/useDatasets';
-import { DatasetFormState, SelectOption } from '@/types/datasets';
+import { DatasetFormState, SelectOption } from '@/types/dataset.types';
 
 const initialFormState: DatasetFormState = {
   name: '',
