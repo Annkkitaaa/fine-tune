@@ -33,8 +33,6 @@ export function useDatasets(options: UseDatasetOptions = {}) {
         }
         setHasMore(response.length === (options.pageSize || 50));
         setCurrentPage(page);
-      } else {
-        throw new Error('Invalid response format');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch datasets');
@@ -44,13 +42,16 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     }
   }, [currentPage, options.pageSize]);
 
-  const uploadDataset = useCallback(async (formData: FormData) => {
+  const uploadDataset = useCallback(async (file: File) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await datasetsService.uploadDataset(formData);
+      const response = await datasetsService.uploadDataset(file);
+      
+      // Add the new dataset to the list
       setDatasets(prev => [response, ...prev]);
+      
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload dataset';

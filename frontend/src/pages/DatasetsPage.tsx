@@ -77,31 +77,16 @@ export const DatasetsPage: React.FC = () => {
   };
 
   const handleUploadDataset = async () => {
-    if (!selectedFile || !datasetForm.name.trim()) {
-      setUploadError('Please select a file and provide a name');
+    if (!selectedFile) {
+      setUploadError('Please select a file');
       return;
     }
-
+  
     try {
       setUploadError(null);
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('config', JSON.stringify({
-        name: datasetForm.name.trim(),
-        description: datasetForm.description.trim(),
-        format: datasetForm.format,
-        preprocessing_config: {
-          handle_missing: datasetForm.handleMissingData,
-          missing_strategy: datasetForm.missingStrategy,
-          handle_outliers: datasetForm.handleOutliers,
-          outlier_method: datasetForm.outlierMethod,
-          outlier_threshold: datasetForm.outlierThreshold,
-          scaling: datasetForm.enableScaling,
-          feature_engineering: datasetForm.enableFeatureEngineering,
-        }
-      }));
-
-      await uploadDataset(formData);
+      await uploadDataset(selectedFile);
+      
+      // Reset form after successful upload
       resetForm();
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
