@@ -1,6 +1,6 @@
 // src/hooks/useDatasets.ts
 import { useState, useCallback } from 'react';
-import { Dataset } from '@/types';
+import { Dataset } from '@/types/dataset.types';
 import { datasetsService } from '@/services/datasets.service';
 
 interface UseDatasetOptions {
@@ -19,21 +19,26 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await datasetsService.getDatasets({
-        skip: page * (options.pageSize || 100),
-        limit: options.pageSize || 100,
+        skip: page * (options.pageSize || 50),
+        limit: options.pageSize || 50,
       });
-      
-      if (page === 0) {
-        setDatasets(response);
+
+      if (Array.isArray(response)) {
+        if (page === 0) {
+          setDatasets(response);
+        } else {
+          setDatasets(prev => [...prev, ...response]);
+        }
+        setHasMore(response.length === (options.pageSize || 50));
+        setCurrentPage(page);
       } else {
-        setDatasets(prev => [...prev, ...response]);
+        throw new Error('Invalid response format');
       }
-      
-      setHasMore(response.length === (options.pageSize || 100));
-      setCurrentPage(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch datasets');
+      setDatasets([]);
     } finally {
       setLoading(false);
     }
@@ -43,12 +48,14 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await datasetsService.uploadDataset(formData);
       setDatasets(prev => [response, ...prev]);
       return response;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload dataset');
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload dataset';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,11 +65,13 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     try {
       setLoading(true);
       setError(null);
+      
       await datasetsService.deleteDataset(id);
       setDatasets(prev => prev.filter(dataset => dataset.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete dataset');
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete dataset';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
