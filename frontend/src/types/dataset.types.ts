@@ -1,19 +1,18 @@
 // src/types/datasets.ts
-
 export interface PreprocessingConfig {
   handle_missing: boolean;
-  missing_strategy: string;
-  handle_outliers: boolean;
-  outlier_method: string;
-  outlier_threshold: number;
-  scaling: boolean;
-  feature_engineering: boolean;
+  missing_strategy?: string;
+  handle_outliers?: boolean;
+  outlier_method?: string;
+  outlier_threshold?: number;
+  scaling?: boolean;
+  feature_engineering?: boolean;
 }
 
 export interface Dataset {
   id: number;
   name: string;
-  description: string | null;
+  description?: string | null;
   format: string;
   preprocessing_config?: PreprocessingConfig;
   owner_id: number;
@@ -25,13 +24,6 @@ export interface Dataset {
   meta_info?: Record<string, any>;
   created_at: string;
   updated_at?: string;
-}
-
-export interface DatasetConfig {
-  name: string;
-  description?: string;
-  format: string;
-  preprocessing_config?: Partial<PreprocessingConfig>;
 }
 
 export interface DatasetFormState {
