@@ -7,22 +7,39 @@ import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { Slider } from '@/components/ui/Slider';
 import { Alert, AlertDescription} from '@/components/ui/Alert';
-import { Loader2, Upload, Search, Filter, Database, AlertCircle } from 'lucide-react';
+import { Loader2, Upload, Search, Filter, AlertCircle } from 'lucide-react';
 import { useDatasets } from '@/hooks/useDatasets';
-import { Dataset } from '@/types';
+import { DatasetFormState, SelectOption } from '@/types/datasets';
 
-interface DatasetFormState {
-  name: string;
-  description: string;
-  format: string;
-  handleMissingData: boolean;
-  missingStrategy: string;
-  handleOutliers: boolean;
-  outlierMethod: string;
-  outlierThreshold: number;
-  enableScaling: boolean;
-  enableFeatureEngineering: boolean;
-}
+const initialFormState: DatasetFormState = {
+  name: '',
+  description: '',
+  format: 'csv',
+  handleMissingData: true,
+  missingStrategy: 'mean',
+  handleOutliers: true,
+  outlierMethod: 'zscore',
+  outlierThreshold: 3,
+  enableScaling: true,
+  enableFeatureEngineering: false,
+};
+
+const formats: SelectOption[] = [
+  { value: 'csv', label: 'CSV' },
+  { value: 'json', label: 'JSON' },
+  { value: 'parquet', label: 'Parquet' },
+];
+
+const missingStrategies: SelectOption[] = [
+  { value: 'mean', label: 'Mean' },
+  { value: 'median', label: 'Median' },
+  { value: 'mode', label: 'Mode' },
+];
+
+const outlierMethods: SelectOption[] = [
+  { value: 'zscore', label: 'Z-Score' },
+  { value: 'iqr', label: 'IQR' },
+];
 
 export const DatasetsPage: React.FC = () => {
   const {
@@ -39,75 +56,63 @@ export const DatasetsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [datasetForm, setDatasetForm] = useState<DatasetFormState>({
-    name: '',
-    description: '',
-    format: 'csv',
-    handleMissingData: true,
-    missingStrategy: 'mean',
-    handleOutliers: true,
-    outlierMethod: 'zscore',
-    outlierThreshold: 3,
-    enableScaling: true,
-    enableFeatureEngineering: false,
-  });
-
-  const formats = [
-    { value: 'csv', label: 'CSV' },
-    { value: 'json', label: 'JSON' },
-    { value: 'parquet', label: 'Parquet' },
-  ];
-
-  const missingStrategies = [
-    { value: 'mean', label: 'Mean' },
-    { value: 'median', label: 'Median' },
-    { value: 'mode', label: 'Mode' },
-  ];
-
-  const outlierMethods = [
-    { value: 'zscore', label: 'Z-Score' },
-    { value: 'iqr', label: 'IQR' },
-  ];
+  const [datasetForm, setDatasetForm] = useState<DatasetFormState>(initialFormState);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDatasets();
   }, [fetchDatasets]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Auto-fill name from filename without extension
+      setDatasetForm(prev => ({
+        ...prev,
+        name: file.name.split('.')[0]
+      }));
+      setUploadError(null);
     }
   };
 
   const handleUploadDataset = async () => {
-    if (!selectedFile) return;
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('config', JSON.stringify({
-      name: datasetForm.name,
-      description: datasetForm.description,
-      format: datasetForm.format,
-      preprocessing_config: {
-        handle_missing: datasetForm.handleMissingData,
-        missing_strategy: datasetForm.missingStrategy,
-        handle_outliers: datasetForm.handleOutliers,
-        outlier_method: datasetForm.outlierMethod,
-        outlier_threshold: datasetForm.outlierThreshold,
-        scaling: datasetForm.enableScaling,
-        feature_engineering: datasetForm.enableFeatureEngineering,
-      }
-    }));
+    if (!selectedFile || !datasetForm.name.trim()) {
+      setUploadError('Please select a file and provide a name');
+      return;
+    }
 
     try {
+      setUploadError(null);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('config', JSON.stringify({
+        name: datasetForm.name.trim(),
+        description: datasetForm.description.trim(),
+        format: datasetForm.format,
+        preprocessing_config: {
+          handle_missing: datasetForm.handleMissingData,
+          missing_strategy: datasetForm.missingStrategy,
+          handle_outliers: datasetForm.handleOutliers,
+          outlier_method: datasetForm.outlierMethod,
+          outlier_threshold: datasetForm.outlierThreshold,
+          scaling: datasetForm.enableScaling,
+          feature_engineering: datasetForm.enableFeatureEngineering,
+        }
+      }));
+
       await uploadDataset(formData);
       resetForm();
     } catch (error) {
-      console.error('Upload failed:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
     }
   };
 
   const handleDeleteDataset = async (datasetId: number) => {
+    if (!window.confirm('Are you sure you want to delete this dataset?')) {
+      return;
+    }
+
     try {
       await deleteDataset(datasetId);
     } catch (error) {
@@ -118,29 +123,23 @@ export const DatasetsPage: React.FC = () => {
   const resetForm = () => {
     setShowUploadForm(false);
     setSelectedFile(null);
-    setDatasetForm({
-      name: '',
-      description: '',
-      format: 'csv',
-      handleMissingData: true,
-      missingStrategy: 'mean',
-      handleOutliers: true,
-      outlierMethod: 'zscore',
-      outlierThreshold: 3,
-      enableScaling: true,
-      enableFeatureEngineering: false,
-    });
+    setDatasetForm(initialFormState);
+    setUploadError(null);
   };
 
-  const filteredDatasets = datasets?.filter(dataset => 
-    dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    dataset.format.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredDatasets = datasets?.filter(dataset => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      dataset.name.toLowerCase().includes(query) ||
+      dataset.format.toLowerCase().includes(query)
+    );
+  }) || [];
 
   if (loading && !datasets?.length) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex items-center justify-center h-full py-8">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
       </div>
     );
   }
@@ -168,16 +167,26 @@ export const DatasetsPage: React.FC = () => {
             <h2 className="text-xl font-semibold">Upload New Dataset</h2>
           </CardHeader>
           <CardContent>
+            {uploadError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{uploadError}</AlertDescription>
+              </Alert>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="Name"
                 value={datasetForm.name}
                 onChange={(e) => setDatasetForm({ ...datasetForm, name: e.target.value })}
+                placeholder="Dataset name"
+                required
               />
               <Input
                 label="Description"
                 value={datasetForm.description}
                 onChange={(e) => setDatasetForm({ ...datasetForm, description: e.target.value })}
+                placeholder="Optional description"
               />
               <Select
                 label="Format"
@@ -189,6 +198,7 @@ export const DatasetsPage: React.FC = () => {
                 type="file"
                 onChange={handleFileSelect}
                 accept=".csv,.json,.parquet"
+                required
               />
               <div className="col-span-2">
                 <h3 className="text-lg font-medium mb-4">Preprocessing Settings</h3>
@@ -286,7 +296,7 @@ export const DatasetsPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead>
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -319,7 +329,7 @@ export const DatasetsPage: React.FC = () => {
                       {dataset.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.format}
+                      {dataset.format.toUpperCase()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {formatFileSize(dataset.size)}
