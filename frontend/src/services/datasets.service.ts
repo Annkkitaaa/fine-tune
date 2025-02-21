@@ -1,6 +1,6 @@
 // src/services/datasets.service.ts
 import { apiClient } from '@/lib/api-client';
-import { Dataset, DatasetConfig } from '@/types/dataset.types';
+import { Dataset } from '@/types/dataset.types';
 
 export const datasetsService = {
   getDatasets: async (params?: { skip?: number; limit?: number }) => {
@@ -10,16 +10,14 @@ export const datasetsService = {
     });
   },
 
-  getDataset: async (id: number) => {
-    return apiClient.request<Dataset>(`/data/${id}`, {
-      method: 'GET',
-    });
-  },
+  uploadDataset: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);  // Backend expects only 'file' field
 
-  uploadDataset: async (formData: FormData) => {
     return apiClient.request<Dataset>('/data/upload', {
       method: 'POST',
       data: formData,
+      // Don't set Content-Type, let browser handle it
       headers: {
         'Accept': 'application/json',
       },
@@ -29,13 +27,6 @@ export const datasetsService = {
   deleteDataset: async (id: number) => {
     return apiClient.request(`/data/${id}`, {
       method: 'DELETE',
-    });
-  },
-
-  updateDataset: async (id: number, config: Partial<DatasetConfig>) => {
-    return apiClient.request<Dataset>(`/data/${id}`, {
-      method: 'PUT',
-      data: config,
     });
   },
 };
