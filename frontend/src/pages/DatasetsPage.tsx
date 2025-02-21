@@ -76,23 +76,27 @@ export const DatasetsPage: React.FC = () => {
     }
   };
 
-  const handleUploadDataset = async () => {
-    if (!selectedFile) {
-      setUploadError('Please select a file');
-      return;
-    }
   
-    try {
-      setUploadError(null);
-      await uploadDataset(selectedFile);
-      
-      // Reset form after successful upload
-      resetForm();
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
-    }
-  };
+const handleUploadDataset = async () => {
+  if (!selectedFile) {
+    setUploadError('Please select a file');
+    return;
+  }
 
+  try {
+    setUploadError(null);
+    
+    // Upload the file
+    await uploadDataset(selectedFile);
+    
+    // Reset form after successful upload
+    resetForm();
+  } catch (error) {
+    console.error('Upload error:', error);
+    setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
+  }
+  };
+  
   const handleDeleteDataset = async (datasetId: number) => {
     if (!window.confirm('Are you sure you want to delete this dataset?')) {
       return;
