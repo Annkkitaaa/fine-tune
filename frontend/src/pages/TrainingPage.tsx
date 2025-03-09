@@ -65,23 +65,46 @@ export const TrainingPage: React.FC = () => {
   }, [trainingForm, loading]);
 
   const handleStartTraining = async () => {
-    console.log("Start training button clicked");
-    console.log("Current form state:", trainingForm);
-    console.log("Is loading:", loading);
-    console.log("Form validation:", {
-      modelIdValid: Boolean(trainingForm.modelId),
-      datasetIdValid: Boolean(trainingForm.datasetId),
-      buttonDisabled: loading || !trainingForm.modelId || !trainingForm.datasetId
-    });
-
+    alert("Start training button was clicked!");
+    // Check if button should be disabled
+    if (loading || !trainingForm.modelId || !trainingForm.datasetId) {
+      console.error("Button should be disabled, but was clicked");
+      return;
+    }
+    
     try {
-      console.log("Attempting to start training...");
-      const result = await startTraining();
-      console.log("Training started successfully:", result);
+      // Disable the button manually
+      setLoading(true);
+      
+      console.log("Starting training with:", {
+        modelId: trainingForm.modelId,
+        datasetId: trainingForm.datasetId,
+        hyperparams: trainingForm.hyperparameters
+      });
+      
+      // Try with both ways of parsing IDs
+      const modelId = parseInt(trainingForm.modelId);
+      const datasetId = parseInt(trainingForm.datasetId);
+      
+      console.log("Parsed IDs:", { modelId, datasetId });
+      
+      // Call the API with temporary try/catch to see exactly where it fails
+      try {
+        const result = await startTraining();
+        console.log("Training started successfully with result:", result);
+      } catch (innerError) {
+        console.error("Training start API call failed:", innerError);
+        alert("Failed to start training job. See console for details.");
+      }
+      
+      // Reset UI state
       setShowNewJob(false);
       resetTrainingForm();
     } catch (error) {
-      console.error('Failed to start training:', error);
+      console.error('Outer error handler - Failed to start training:', error);
+    } finally {
+      // Make sure to clear loading state
+      setLoading(false);
     }
   };
 
