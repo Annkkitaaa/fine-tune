@@ -46,13 +46,38 @@ export const TrainingPage: React.FC = () => {
 
   // Fetch models and datasets on component mount
   useEffect(() => {
+    console.log("Fetching models and datasets...");
     fetchModels();
     fetchDatasets();
   }, [fetchModels, fetchDatasets]);
 
+  // Debug log whenever form values change
+  useEffect(() => {
+    console.log("Training form updated:", {
+      modelId: trainingForm.modelId,
+      datasetId: trainingForm.datasetId,
+      hyperparameters: trainingForm.hyperparameters
+    });
+    
+    console.log("Button should be disabled:", 
+      loading || !trainingForm.modelId || !trainingForm.datasetId
+    );
+  }, [trainingForm, loading]);
+
   const handleStartTraining = async () => {
+    console.log("Start training button clicked");
+    console.log("Current form state:", trainingForm);
+    console.log("Is loading:", loading);
+    console.log("Form validation:", {
+      modelIdValid: Boolean(trainingForm.modelId),
+      datasetIdValid: Boolean(trainingForm.datasetId),
+      buttonDisabled: loading || !trainingForm.modelId || !trainingForm.datasetId
+    });
+
     try {
-      await startTraining();
+      console.log("Attempting to start training...");
+      const result = await startTraining();
+      console.log("Training started successfully:", result);
       setShowNewJob(false);
       resetTrainingForm();
     } catch (error) {
@@ -79,6 +104,11 @@ export const TrainingPage: React.FC = () => {
     label: dataset.name || `Dataset ${dataset.id}`
   })) : [];
 
+  useEffect(() => {
+    console.log("Model options:", modelOptions);
+    console.log("Dataset options:", datasetOptions);
+  }, [modelOptions, datasetOptions]);
+
   // Filter trainings based on search query
   const filteredTrainings = trainings.filter(training => {
     if (!searchQuery) return true;
@@ -102,6 +132,16 @@ export const TrainingPage: React.FC = () => {
       </div>
     );
   }
+
+  // Additional debugging information
+  console.log("Rendering training dashboard with:", {
+    trainingsCount: trainings.length,
+    modelsCount: modelOptions.length,
+    datasetsCount: datasetOptions.length,
+    showNewJob,
+    loading,
+    error
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -142,13 +182,19 @@ export const TrainingPage: React.FC = () => {
                   label="Model"
                   options={modelOptions}
                   value={trainingForm.modelId}
-                  onChange={(value) => updateTrainingForm({ modelId: value })}
+                  onChange={(value) => {
+                    console.log("Model selected:", value);
+                    updateTrainingForm({ modelId: value });
+                  }}
                 />
                 <Select
                   label="Dataset"
                   options={datasetOptions}
                   value={trainingForm.datasetId}
-                  onChange={(value) => updateTrainingForm({ datasetId: value })}
+                  onChange={(value) => {
+                    console.log("Dataset selected:", value);
+                    updateTrainingForm({ datasetId: value });
+                  }}
                 />
                 <Input
                   label="Learning Rate"
