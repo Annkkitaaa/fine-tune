@@ -18,15 +18,15 @@ export function usePipeline() {
       setLoading(true);
       setError(null);
       
-      // Changed from trainingService to pipelineService
       const response = await pipelineService.listPipelines();
       console.log("Fetched pipelines:", response);
       setPipelines(response || []);
     } catch (err) {
       console.error("Error fetching pipelines:", err);
-      // For timeout errors, just set empty array instead of error
-      if (err.message?.includes('timeout') || 
-          err.message === 'Request timed out') {
+      
+      // Handle different error types
+      if (err instanceof Error && 
+         (err.message.includes('timeout') || err.message.includes('busy'))) {
         console.log("Pipeline request timed out - using empty list");
         setPipelines([]);
       } else {
@@ -36,7 +36,6 @@ export function usePipeline() {
       setLoading(false);
     }
   }, []);
-  
 
   const createPipeline = useCallback(async () => {
     try {
@@ -112,7 +111,7 @@ export function usePipeline() {
         console.log("Polling for pipeline updates");
         fetchPipelines();
       }
-    }, 10000); // Poll every 10 seconds
+    }, 15000); // Reduced polling frequency to 15 seconds to avoid overwhelming the server
     
     return () => clearInterval(interval);
   }, [fetchPipelines, pipelines]);
