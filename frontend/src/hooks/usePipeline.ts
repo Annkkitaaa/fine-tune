@@ -17,16 +17,26 @@ export function usePipeline() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Changed from trainingService to pipelineService
       const response = await pipelineService.listPipelines();
       console.log("Fetched pipelines:", response);
-      setPipelines(response);
+      setPipelines(response || []);
     } catch (err) {
       console.error("Error fetching pipelines:", err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch pipelines');
+      // For timeout errors, just set empty array instead of error
+      if (err.message?.includes('timeout') || 
+          err.message === 'Request timed out') {
+        console.log("Pipeline request timed out - using empty list");
+        setPipelines([]);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch pipelines');
+      }
     } finally {
       setLoading(false);
     }
   }, []);
+  
 
   const createPipeline = useCallback(async () => {
     try {

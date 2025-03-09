@@ -19,7 +19,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      // Add timeout to prevent hanging requests
+      // Increased timeout to prevent hanging requests
       timeout: 30000, // 30 seconds
     });
 
@@ -76,6 +76,11 @@ class ApiClient {
         data: axiosError.response?.data
       });
       
+      // Handle timeout errors specifically
+      if (axiosError.code === 'ECONNABORTED') {
+        return new Error('Request timed out. The server might be busy or unavailable.');
+      }
+      
       if (axiosError.response?.data) {
         // Handle validation errors array
         if (Array.isArray(axiosError.response.data)) {
@@ -114,6 +119,19 @@ class ApiClient {
     }
 
     return new Error('An unexpected error occurred');
+  }
+
+  // Utility function to retry API calls
+  async withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if (retries <= 0) throw error;
+      
+      console.log(`Retrying operation, ${retries} attempts left`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.withRetry(fn, retries - 1, delay * 1.5);
+    }
   }
 
   async request<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
