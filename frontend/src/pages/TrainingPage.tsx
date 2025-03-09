@@ -12,7 +12,8 @@ import {
   Search, 
   Filter, 
   AlertCircle,
-  RefreshCw 
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { useTraining } from '@/hooks/useTraining';
 import { useTrainingUtils } from '@/hooks/useTrainingUtils';
@@ -31,6 +32,7 @@ export const TrainingPage: React.FC = () => {
     loading,
     error,
     startTraining,
+    directStartTraining, // Added emergency method
     stopTraining,
     updateTrainingForm,
     resetTrainingForm,
@@ -43,76 +45,84 @@ export const TrainingPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewJob, setShowNewJob] = useState(false);
+  const [processingAction, setProcessingAction] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   // Fetch models and datasets on component mount
   useEffect(() => {
-    console.log("Fetching models and datasets...");
+    console.log("Component mounted - fetching data");
     fetchModels();
     fetchDatasets();
   }, [fetchModels, fetchDatasets]);
 
-  // Debug log whenever form values change
-  useEffect(() => {
-    console.log("Training form updated:", {
-      modelId: trainingForm.modelId,
-      datasetId: trainingForm.datasetId,
-      hyperparameters: trainingForm.hyperparameters
-    });
-    
-    console.log("Button should be disabled:", 
-      loading || !trainingForm.modelId || !trainingForm.datasetId
-    );
-  }, [trainingForm, loading]);
-
+  // Enhanced start training with better error handling
   const handleStartTraining = async () => {
-    alert("Start training button was clicked!");
-    // Check if button should be disabled
-    if (loading || !trainingForm.modelId || !trainingForm.datasetId) {
-      console.error("Button should be disabled, but was clicked");
-      return;
-    }
-    
+    console.log("Start training button clicked");
     try {
-      // Disable the button manually
-      setLoading(true);
+      setProcessingAction(true);
+      setLocalError(null);
       
-      console.log("Starting training with:", {
+      console.log("Form validation:", {
         modelId: trainingForm.modelId,
         datasetId: trainingForm.datasetId,
-        hyperparams: trainingForm.hyperparameters
+        isValid: Boolean(trainingForm.modelId) && Boolean(trainingForm.datasetId)
       });
       
-      // Try with both ways of parsing IDs
-      const modelId = parseInt(trainingForm.modelId);
-      const datasetId = parseInt(trainingForm.datasetId);
-      
-      console.log("Parsed IDs:", { modelId, datasetId });
-      
-      // Call the API with temporary try/catch to see exactly where it fails
-      try {
-        const result = await startTraining();
-        console.log("Training started successfully with result:", result);
-      } catch (innerError) {
-        console.error("Training start API call failed:", innerError);
-        alert("Failed to start training job. See console for details.");
+      if (!trainingForm.modelId || !trainingForm.datasetId) {
+        setLocalError("Please select a model and dataset");
+        return;
       }
       
-      // Reset UI state
-      setShowNewJob(false);
-      resetTrainingForm();
+      // Try regular method first
+      try {
+        console.log("Attempting to start training via normal method");
+        await startTraining();
+        console.log("Training started successfully!");
+        setShowNewJob(false);
+        resetTrainingForm();
+      } catch (err) {
+        console.error("Regular start failed, trying direct method:", err);
+        // If regular method fails, try direct method
+        await directStartTraining();
+        console.log("Training started via direct method!");
+        setShowNewJob(false);
+        resetTrainingForm();
+      }
     } catch (error) {
-      console.error('Outer error handler - Failed to start training:', error);
+      console.error('Failed to start training:', error);
+      setLocalError(error instanceof Error ? error.message : 'Failed to start training');
     } finally {
-      // Make sure to clear loading state
-      setLoading(false);
+      setProcessingAction(false);
     }
   };
 
+  // Handle stopping a training job
   const handleStopTraining = async (trainingId: number) => {
+    console.log(`Attempting to stop training: ${trainingId}`);
     try {
+      setProcessingAction(true);
       await stopTraining(trainingId);
+      console.log("Training stopped successfully");
     } catch (error) {
       console.error('Failed to stop training:', error);
+      setLocalError(error instanceof Error ? error.message : 'Failed to stop training');
+    } finally {
+      setProcessingAction(false);
+    }
+  };
+
+  // Handle refreshing the training list
+  const handleRefresh = async () => {
+    console.log("Refresh button clicked");
+    try {
+      setProcessingAction(true);
+      await refreshTrainings();
+      console.log("Training list refreshed");
+    } catch (error) {
+      console.error('Failed to refresh trainings:', error);
+      setLocalError(error instanceof Error ? error.message : 'Failed to refresh trainings');
+    } finally {
+      setProcessingAction(false);
     }
   };
 
@@ -126,11 +136,6 @@ export const TrainingPage: React.FC = () => {
     value: dataset.id.toString(),
     label: dataset.name || `Dataset ${dataset.id}`
   })) : [];
-
-  useEffect(() => {
-    console.log("Model options:", modelOptions);
-    console.log("Dataset options:", datasetOptions);
-  }, [modelOptions, datasetOptions]);
 
   // Filter trainings based on search query
   const filteredTrainings = trainings.filter(training => {
@@ -156,14 +161,11 @@ export const TrainingPage: React.FC = () => {
     );
   }
 
-  // Additional debugging information
   console.log("Rendering training dashboard with:", {
     trainingsCount: trainings.length,
     modelsCount: modelOptions.length,
     datasetsCount: datasetOptions.length,
-    showNewJob,
-    loading,
-    error
+    formState: trainingForm
   });
 
   return (
@@ -173,10 +175,10 @@ export const TrainingPage: React.FC = () => {
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
-            onClick={refreshTrainings}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={processingAction}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${processingAction ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowNewJob(!showNewJob)}>
@@ -186,10 +188,10 @@ export const TrainingPage: React.FC = () => {
         </div>
       </div>
 
-      {error && (
+      {(error || localError) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || localError}</AlertDescription>
         </Alert>
       )}
 
@@ -288,9 +290,10 @@ export const TrainingPage: React.FC = () => {
               </Button>
               <Button
                 onClick={handleStartTraining}
-                disabled={loading || !trainingForm.modelId || !trainingForm.datasetId}
+                disabled={processingAction || !trainingForm.modelId || !trainingForm.datasetId}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                {loading ? (
+                {processingAction ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Starting...
@@ -298,6 +301,16 @@ export const TrainingPage: React.FC = () => {
                 ) : (
                   'Start Training'
                 )}
+              </Button>
+              
+              {/* Emergency button for direct API call */}
+              <Button
+                onClick={directStartTraining}
+                disabled={processingAction || !trainingForm.modelId || !trainingForm.datasetId}
+                className="bg-red-600 hover:bg-red-700 flex items-center"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Direct Start
               </Button>
             </div>
           </CardContent>
@@ -407,7 +420,7 @@ export const TrainingPage: React.FC = () => {
                           size="sm"
                           variant="destructive"
                           onClick={() => handleStopTraining(training.id)}
-                          disabled={loading}
+                          disabled={processingAction}
                         >
                           <Pause className="w-4 h-4" />
                         </Button>
