@@ -1,8 +1,20 @@
+// src/services/training.service.ts
+import { apiClient } from '@/lib/api-client';
 import { Training, TrainingCreate } from '@/types';
 
 export const trainingService = {
-  startTraining: (data: TrainingCreate) => 
-    apiService.post<Training>('/training/start', data),
-  getTrainingStatus: (id: number) => 
-    apiService.get<Training>(`/training/${id}/status`),
+  // Start a new training job
+  startTraining: async (data: TrainingCreate) => {
+    return apiClient.request<Training>('/training/start', {
+      method: 'POST',
+      data,
+    });
+  },
+  
+  // Get status of a training job
+  getTrainingStatus: async (id: number) => {
+    return apiClient.request<Training>(`/training/${id}/status`, {
+      method: 'GET',
+    });
+  }
 };
