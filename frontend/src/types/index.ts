@@ -213,3 +213,8 @@ export interface PipelineListResponse {
   execution_time?: number;
   error_message?: string;
 }
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}

@@ -5,100 +5,103 @@ import {
   TrainingCreateRequest
 } from '@/lib/types/training';
 
-// Define the API base URL - make sure this matches your backend
-const API_BASE = '/api/v1';
+// Store trained models in localStorage to keep track
+const TRAINING_IDS_KEY = 'ml_platform_training_ids';
 
 export const trainingService = {
-  // This is a mock implementation since there's no list endpoint
   listTrainings: async (): Promise<Training[]> => {
-    console.log("Mock listTrainings called - returning stored trainings");
-    
+    console.log("[TrainingService] listTrainings called");
     try {
-      // Get saved training IDs from localStorage
-      const trainingIdsStr = localStorage.getItem('ml_platform_training_ids');
-      if (!trainingIdsStr) return [];
+      // Get training IDs from localStorage
+      const trainingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
+      if (!trainingIdsStr) {
+        console.log("[TrainingService] No training IDs found in localStorage");
+        return [];
+      }
       
-      const trainingIds = JSON.parse(trainingIdsStr) as number[];
+      const trainingIds = JSON.parse(trainingIdsStr);
+      console.log("[TrainingService] Found training IDs:", trainingIds);
       
-      // Fetch status for each training ID
-      const trainings = await Promise.all(
-        trainingIds.map(id => 
-          trainingService.getTrainingStatus(id)
-            .catch(() => null)
-        )
+      // Fetch each training status
+      const trainingsPromises = trainingIds.map((id: number) => 
+        trainingService.getTrainingStatus(id)
+          .catch(err => {
+            console.error(`[TrainingService] Error fetching training ${id}:`, err);
+            return null;
+          })
       );
       
-      // Filter out failed requests
-      return trainings.filter(Boolean) as Training[];
+      const results = await Promise.all(trainingsPromises);
+      const validTrainings = results.filter(Boolean) as Training[];
+      
+      console.log("[TrainingService] Retrieved trainings:", validTrainings.length);
+      return validTrainings;
     } catch (error) {
-      console.error("Error in listTrainings:", error);
+      console.error("[TrainingService] Error in listTrainings:", error);
       return [];
     }
   },
   
-  // Get a specific training by ID
   getTrainingStatus: async (trainingId: number): Promise<Training> => {
-    console.log(`Fetching training status for ID: ${trainingId}`);
-    
-    return apiClient.request<Training>(`${API_BASE}/training/${trainingId}/status`, {
-      method: 'GET'
-    });
+    console.log(`[TrainingService] getTrainingStatus for ID: ${trainingId}`);
+    return apiClient.request<Training>(`/api/v1/training/${trainingId}/status`);
   },
   
-  // Start a new training job
   startTraining: async (data: TrainingCreateRequest): Promise<Training> => {
-    console.log("Starting training with data:", data);
+    console.log("[TrainingService] startTraining called with data:", data);
     
     try {
-      const response = await apiClient.request<Training>(`${API_BASE}/training/start`, {
+      // Make the API request
+      const response = await apiClient.request<Training>('/api/v1/training/start', {
         method: 'POST',
         data,
       });
       
-      console.log("Training started successfully:", response);
+      console.log("[TrainingService] Training started successfully:", response);
       
       // Save the training ID to localStorage
       if (response && response.id) {
-        const existingIdsStr = localStorage.getItem('ml_platform_training_ids');
+        const existingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
         let existingIds: number[] = [];
         
         if (existingIdsStr) {
           try {
             existingIds = JSON.parse(existingIdsStr);
           } catch (e) {
-            console.error("Error parsing training IDs:", e);
+            console.error("[TrainingService] Error parsing training IDs:", e);
           }
         }
         
         if (!existingIds.includes(response.id)) {
           existingIds.push(response.id);
-          localStorage.setItem('ml_platform_training_ids', JSON.stringify(existingIds));
+          localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(existingIds));
+          console.log("[TrainingService] Added training ID to localStorage:", response.id);
         }
       }
       
       return response;
     } catch (error) {
-      console.error("Error starting training:", error);
+      console.error("[TrainingService] Error starting training:", error);
       throw error;
     }
   },
   
-  // Mock implementation for stop since the endpoint might not exist
+  // Try to stop training - may not be implemented on backend
   stopTraining: async (trainingId: number): Promise<Training> => {
-    console.log(`Stopping training job: ${trainingId}`);
+    console.log(`[TrainingService] stopTraining for ID: ${trainingId}`);
     
     try {
-      // First try to see if a real endpoint exists
+      // Try the stop endpoint if it exists
       try {
-        const response = await apiClient.request<Training>(`${API_BASE}/training/${trainingId}/stop`, {
+        const response = await apiClient.request<Training>(`/api/v1/training/${trainingId}/stop`, {
           method: 'POST'
         });
-        console.log("Training stopped via API:", response);
+        console.log("[TrainingService] Training stopped via API:", response);
         return response;
       } catch (e) {
-        console.log("No stop endpoint, using fallback method");
+        console.log("[TrainingService] Stop endpoint not available, using status as fallback");
         
-        // Fallback - just get the current status and mark as stopped in UI
+        // Fallback - get current status and mark as stopped in UI
         const currentStatus = await trainingService.getTrainingStatus(trainingId);
         return {
           ...currentStatus,
@@ -106,7 +109,59 @@ export const trainingService = {
         };
       }
     } catch (error) {
-      console.error("Error in stopTraining:", error);
+      console.error("[TrainingService] Error stopping training:", error);
+      throw error;
+    }
+  },
+  
+  // Direct API call for emergency use
+  directTrainingStart: async (data: TrainingCreateRequest): Promise<any> => {
+    console.log("[TrainingService] directTrainingStart with data:", data);
+    
+    // Get auth token if used
+    const token = localStorage.getItem('access_token');
+    
+    try {
+      const response = await fetch('/api/v1/training/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(data)
+      });
+      
+      console.log("[TrainingService] Direct API response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("[TrainingService] Direct API response data:", result);
+      
+      // Save to localStorage
+      if (result && result.id) {
+        const existingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
+        let existingIds: number[] = [];
+        
+        if (existingIdsStr) {
+          try {
+            existingIds = JSON.parse(existingIdsStr);
+          } catch (e) {
+            console.error("[TrainingService] Error parsing training IDs:", e);
+          }
+        }
+        
+        if (!existingIds.includes(result.id)) {
+          existingIds.push(result.id);
+          localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(existingIds));
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("[TrainingService] Error in directTrainingStart:", error);
       throw error;
     }
   }
