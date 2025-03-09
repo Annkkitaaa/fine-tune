@@ -10,20 +10,20 @@ export const datasetsService = {
     });
   },
 
-  uploadDataset: async (file: File, name: string, description?: string, format?: string) => {
+  uploadDataset: async (file: File, name?: string, description?: string, format?: string) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    // Add metadata if needed - we'll keep this simple for now
-    // Note: Based on your API spec, these fields may not be accepted directly in this endpoint
+    // Backend might not accept these fields directly, but we'll include them
+    // just in case they're needed for future development
     if (name) formData.append('name', name);
     if (description) formData.append('description', description);
     if (format) formData.append('format', format);
-  
+
     return apiClient.request<Dataset>('/data/upload', {
       method: 'POST',
       data: formData,
-      // Content-Type is now handled by the interceptor we fixed
+      // Content-Type is handled by the interceptor
     });
   },
 
