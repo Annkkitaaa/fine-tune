@@ -14,15 +14,18 @@ class ApiClient {
   private instance: AxiosInstance;
 
   constructor() {
+    // Ensure the API_URL already includes /api/v1
+    const baseURL = API_URL.endsWith('/api/v1') ? API_URL : `${API_URL}/api/v1`;
+    
     this.instance = axios.create({
-      baseURL: API_URL,
+      baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
       // Increased timeout to prevent hanging requests
       timeout: 30000, // 30 seconds
     });
-
+  
     this.setupInterceptors();
   }
 

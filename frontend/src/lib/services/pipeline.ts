@@ -5,6 +5,8 @@ import {
   PipelineFormState 
 } from '@/lib/types/pipeline';
 
+console.log("API URL:", import.meta.env.VITE_API_URL);
+
 export const pipelineService = {
   listPipelines: () =>
     apiClient.withRetry(() => 
