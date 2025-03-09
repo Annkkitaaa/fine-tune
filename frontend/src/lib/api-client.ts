@@ -1,11 +1,13 @@
+// src/lib/api-client.ts
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// Make sure this matches your backend URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const TOKEN_KEY = 'access_token';
 
 export const AUTH_ENDPOINTS = {
-  LOGIN: '/auth/login',
-  REGISTER: '/auth/register'
+  LOGIN: '/api/v1/auth/login',
+  REGISTER: '/api/v1/auth/register'
 };
 
 class ApiClient {
@@ -17,6 +19,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add timeout to prevent hanging requests
+      timeout: 30000, // 30 seconds
     });
 
     this.setupInterceptors();
@@ -25,27 +29,37 @@ class ApiClient {
   private setupInterceptors() {
     this.instance.interceptors.request.use(
       (config) => {
-        // Don't set content-type for FormData requests - let the browser handle it
+        console.log(`${config.method?.toUpperCase()} Request to: ${config.baseURL}${config.url}`);
+        
+        // Don't set content-type for FormData requests
         if (config.data instanceof FormData) {
-          if (config.headers) {
-            delete (config.headers as any)['Content-Type'];
-          }
+          config.headers = {
+            ...config.headers,
+            'Content-Type': undefined, // Let browser handle it
+          };
         }
         
+        // Add auth token if available
         const token = localStorage.getItem(TOKEN_KEY);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        
         return config;
       },
       (error) => {
+        console.error("Request interceptor error:", error);
         return Promise.reject(this.handleError(error));
       }
     );
 
     this.instance.interceptors.response.use(
-      (response) => response.data,
+      (response) => {
+        console.log(`Response from ${response.config.url}: Success (${response.status})`);
+        return response.data;
+      },
       (error) => {
+        console.error("Response interceptor error:", error);
         return Promise.reject(this.handleError(error));
       }
     );
@@ -54,6 +68,13 @@ class ApiClient {
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<any>;
+      
+      console.error("Axios Error:", {
+        status: axiosError.response?.status,
+        url: axiosError.config?.url,
+        method: axiosError.config?.method,
+        data: axiosError.response?.data
+      });
       
       if (axiosError.response?.data) {
         // Handle validation errors array
@@ -82,7 +103,7 @@ class ApiClient {
         case 403:
           return new Error('You do not have permission');
         case 404:
-          return new Error('Resource not found');
+          return new Error(`Resource not found: ${axiosError.config?.url}`);
         case 422:
           return new Error('Invalid input data');
         case 500:
@@ -97,12 +118,19 @@ class ApiClient {
 
   async request<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
     try {
+      // Add request ID for debugging
+      const requestId = Math.random().toString(36).substring(2, 9);
+      console.log(`[${requestId}] Making request to ${endpoint}`);
+      
       const response = await this.instance.request<any, T>({
         url: endpoint,
         ...config,
       });
+      
+      console.log(`[${requestId}] Request successful`);
       return response;
     } catch (error) {
+      console.error(`Request to ${endpoint} failed:`, error);
       throw this.handleError(error);
     }
   }
