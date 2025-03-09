@@ -8,11 +8,12 @@ import {
 export const pipelineService = {
   listPipelines: () =>
     apiClient.withRetry(() => 
-      apiClient.request<Pipeline[]>('/api/v1/pipeline/list')
+      // Remove /api/v1 from here since it's already in the base URL
+      apiClient.request<Pipeline[]>('/pipeline/list')
     ),
 
   getPipeline: (id: string) =>
-    apiClient.request<Pipeline>(`/api/v1/pipeline/${id}`),
+    apiClient.request<Pipeline>(`/pipeline/${id}`),
 
   createPipeline: (data: PipelineFormState) => {
     // Transform data structure to match the API's expected format
@@ -43,7 +44,7 @@ export const pipelineService = {
 
     console.log("Sending pipeline request:", payload);
 
-    return apiClient.request<Pipeline>('/api/v1/pipeline/process', {
+    return apiClient.request<Pipeline>('/pipeline/process', {
       method: 'POST',
       data: payload,
     });
@@ -51,7 +52,7 @@ export const pipelineService = {
 
   rerunPipeline: (pipelineId: string) => {
     // For rerunning, use a direct POST to the process endpoint with just the pipeline_id
-    return apiClient.request<Pipeline>(`/api/v1/pipeline/process`, {
+    return apiClient.request<Pipeline>(`/pipeline/process`, {
       method: 'POST',
       data: {
         pipeline_id: pipelineId
@@ -60,7 +61,7 @@ export const pipelineService = {
   },
 
   deletePipeline: (pipelineId: string) =>
-    apiClient.request(`/api/v1/pipeline/${pipelineId}`, {
+    apiClient.request(`/pipeline/${pipelineId}`, {
       method: 'DELETE',
     }),
 };
