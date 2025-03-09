@@ -1,5 +1,5 @@
 // src/pages/TrainingPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -37,12 +37,18 @@ export const TrainingPage: React.FC = () => {
     refreshTrainings
   } = useTraining();
 
-  const { models } = useModels();
-  const { datasets } = useDatasets();
+  const { models, loading: modelsLoading, fetchModels } = useModels();
+  const { datasets, loading: datasetsLoading, fetchDatasets } = useDatasets();
   const utils = useTrainingUtils();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewJob, setShowNewJob] = useState(false);
+
+  // Fetch models and datasets on component mount
+  useEffect(() => {
+    fetchModels();
+    fetchDatasets();
+  }, [fetchModels, fetchDatasets]);
 
   const handleStartTraining = async () => {
     try {
@@ -62,19 +68,37 @@ export const TrainingPage: React.FC = () => {
     }
   };
 
+  // Prepare model and dataset options for select inputs
+  const modelOptions = models && Array.isArray(models) ? models.map(model => ({
+    value: model.id.toString(),
+    label: model.name
+  })) : [];
+
+  const datasetOptions = datasets && Array.isArray(datasets) ? datasets.map(dataset => ({
+    value: dataset.id.toString(),
+    label: dataset.name || `Dataset ${dataset.id}`
+  })) : [];
+
+  // Filter trainings based on search query
   const filteredTrainings = trainings.filter(training => {
-    const modelName = models.find(m => m.value === training.model_id.toString())?.label || '';
-    const datasetName = datasets.find(d => d.value === training.dataset_id.toString())?.label || '';
+    if (!searchQuery) return true;
+    
     const searchTerm = searchQuery.toLowerCase();
+    const modelName = modelOptions.find(m => m.value === training.model_id.toString())?.label || '';
+    const datasetName = datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || '';
     
     return modelName.toLowerCase().includes(searchTerm) ||
            datasetName.toLowerCase().includes(searchTerm);
   });
 
-  if (loading && !trainings.length) {
+  // Handle loading state
+  if ((loading && !trainings.length) || modelsLoading || datasetsLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="flex items-center justify-center h-full py-20">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-blue-500" />
+          <p className="text-gray-500">Loading training dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -116,13 +140,13 @@ export const TrainingPage: React.FC = () => {
               <div className="space-y-4">
                 <Select
                   label="Model"
-                  options={models}
+                  options={modelOptions}
                   value={trainingForm.modelId}
                   onChange={(value) => updateTrainingForm({ modelId: value })}
                 />
                 <Select
                   label="Dataset"
-                  options={datasets}
+                  options={datasetOptions}
                   value={trainingForm.datasetId}
                   onChange={(value) => updateTrainingForm({ datasetId: value })}
                 />
@@ -211,51 +235,53 @@ export const TrainingPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Training Progress</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <MetricsVisualization
-                type="line"
-                data={trainings.map(t => ({
-                  name: models.find(m => m.value === t.model_id.toString())?.label || '',
-                  progress: utils.calculateProgress(t)
-                }))}
-                title="Training Progress"
-                xKey="name"
-                yKey="progress"
-                height={300}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Performance Metrics - Only show if there are trainings */}
+      {trainings.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Training Progress</h2>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <MetricsVisualization
+                  type="line"
+                  data={trainings.map(t => ({
+                    name: modelOptions.find(m => m.value === t.model_id.toString())?.label || `Model ${t.model_id}`,
+                    progress: utils.calculateProgress(t)
+                  }))}
+                  title="Training Progress"
+                  xKey="name"
+                  yKey="progress"
+                  height={300}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Loss & Accuracy</h2>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <MetricsVisualization
-                type="line"
-                data={trainings.filter(t => t.metrics).map(t => ({
-                  name: models.find(m => m.value === t.model_id.toString())?.label || '',
-                  loss: t.metrics?.loss || 0,
-                  accuracy: t.metrics?.accuracy || 0
-                }))}
-                title="Training Metrics"
-                xKey="name"
-                yKey="accuracy"
-                height={300}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Loss & Accuracy</h2>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <MetricsVisualization
+                  type="line"
+                  data={trainings.filter(t => t.metrics).map(t => ({
+                    name: modelOptions.find(m => m.value === t.model_id.toString())?.label || `Model ${t.model_id}`,
+                    loss: t.metrics?.loss || 0,
+                    accuracy: t.metrics?.accuracy || 0
+                  }))}
+                  title="Training Metrics"
+                  xKey="name"
+                  yKey="accuracy"
+                  height={300}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Training Jobs List */}
       <Card>
@@ -293,10 +319,10 @@ export const TrainingPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-medium">
-                        {models.find(m => m.value === training.model_id.toString())?.label}
+                        {modelOptions.find(m => m.value === training.model_id.toString())?.label || `Model ${training.model_id}`}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Dataset: {datasets.find(d => d.value === training.dataset_id.toString())?.label}
+                        Dataset: {datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || `Dataset ${training.dataset_id}`}
                       </p>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -321,7 +347,7 @@ export const TrainingPage: React.FC = () => {
                   </div>
 
                   {/* Progress Bar */}
-                  {training.status === 'running' && (
+                  {(training.status === 'running' || training.status === 'queued') && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>
@@ -365,15 +391,15 @@ export const TrainingPage: React.FC = () => {
                     <div className="grid grid-cols-3 gap-4 mt-4">
                       <div className="text-sm">
                         <span className="text-gray-500 dark:text-gray-400">CPU Usage:</span>{' '}
-                        {utils.formatPercentage(training.metrics.cpu_usage || 0)}
+                        {utils.formatPercentage(training.metrics.cpu_usage)}
                       </div>
                       <div className="text-sm">
                         <span className="text-gray-500 dark:text-gray-400">Memory Usage:</span>{' '}
-                        {utils.formatPercentage(training.metrics.memory_usage || 0)}
+                        {utils.formatPercentage(training.metrics.memory_usage)}
                       </div>
                       <div className="text-sm">
                         <span className="text-gray-500 dark:text-gray-400">GPU Usage:</span>{' '}
-                        {utils.formatPercentage(training.metrics.gpu_usage || 0)}
+                        {utils.formatPercentage(training.metrics.gpu_usage)}
                       </div>
                     </div>
                   )}
