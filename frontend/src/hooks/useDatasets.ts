@@ -36,21 +36,28 @@ export function useDatasets(options: UseDatasetOptions = {}) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch datasets');
-      setDatasets([]);
+      console.error('Error fetching datasets:', err);
     } finally {
       setLoading(false);
     }
   }, [currentPage, options.pageSize]);
 
-  const uploadDataset = useCallback(async (file: File, metadata?: any) => {
+  const uploadDataset = useCallback(async (
+    file: File, 
+    name?: string, 
+    description?: string, 
+    format?: string
+  ) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await datasetsService.uploadDataset(file, metadata);
+      const response = await datasetsService.uploadDataset(file, name, description, format);
       
       // Add the new dataset to the list
-      setDatasets(prev => [response, ...prev]);
+      if (response) {
+        setDatasets(prev => [response, ...prev]);
+      }
       
       return response;
     } catch (err) {
