@@ -34,7 +34,7 @@ export function useTrainingUtils() {
     if (!training) return 0;
     if (training.status === 'completed') return 100;
     
-    // Use safe navigation with proper null checks
+    // Use safe navigation
     const metrics = training.metrics;
     const hyperparameters = training.hyperparameters;
     
