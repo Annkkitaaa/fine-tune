@@ -1,5 +1,5 @@
 // src/hooks/useDatasets.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Dataset } from '@/types/dataset.types';
 import { datasetsService } from '@/services/datasets.service';
 
@@ -14,9 +14,21 @@ export function useDatasets(options: UseDatasetOptions = {}) {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(options.initialPage || 0);
   const [hasMore, setHasMore] = useState(true);
+  
+  // Track if we've done the initial fetch
+  const initialFetchDone = useRef(false);
+  // Track if we're currently fetching to prevent duplicate requests
+  const isFetching = useRef(false);
 
-  const fetchDatasets = useCallback(async (page = currentPage) => {
+  const fetchDatasets = useCallback(async (page = currentPage, force = false) => {
+    // Skip if already fetching unless forced
+    if (isFetching.current && !force) {
+      console.log("Already fetching datasets, skipping duplicate request");
+      return [];
+    }
+    
     try {
+      isFetching.current = true;
       setLoading(true);
       setError(null);
       
@@ -52,6 +64,7 @@ export function useDatasets(options: UseDatasetOptions = {}) {
       return [];
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, [currentPage, options.pageSize]);
 
@@ -104,10 +117,15 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     }
   }, [loading, hasMore, currentPage, fetchDatasets]);
 
-  // Initial fetch on mount
+  // Initial fetch on mount - only run once
   useEffect(() => {
-    fetchDatasets(0);
-  }, []);
+    // Only fetch if we haven't already done the initial fetch
+    if (!initialFetchDone.current) {
+      console.log("Performing initial datasets fetch");
+      fetchDatasets(0, true);
+      initialFetchDone.current = true;
+    }
+  }, []); // Empty dependency array ensures this only runs once
 
   return {
     datasets,

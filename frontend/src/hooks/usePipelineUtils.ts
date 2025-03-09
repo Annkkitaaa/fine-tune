@@ -1,6 +1,4 @@
 // src/hooks/usePipelineUtils.ts
-import { Pipeline, PipelineResults } from '@/lib/types/pipeline';
-
 export function usePipelineUtils() {
   const formatProcessedData = (rows?: number) => {
     if (!rows) return '0 rows';
@@ -57,3 +55,7 @@ export function usePipelineUtils() {
     formatDuration,
   };
 }
+
+// Add this to make the default export match the named export
+// This ensures compatibility with both import styles
+export default usePipelineUtils;
