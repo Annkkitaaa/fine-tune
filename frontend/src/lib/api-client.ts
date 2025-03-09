@@ -1,4 +1,3 @@
-
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -26,6 +25,13 @@ class ApiClient {
   private setupInterceptors() {
     this.instance.interceptors.request.use(
       (config) => {
+        // Don't set content-type for FormData requests - let the browser handle it
+        if (config.data instanceof FormData) {
+          if (config.headers) {
+            delete (config.headers as any)['Content-Type'];
+          }
+        }
+        
         const token = localStorage.getItem(TOKEN_KEY);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
