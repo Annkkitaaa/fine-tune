@@ -5,15 +5,14 @@ import {
   TrainingCreateRequest
 } from '@/lib/types/training';
 
-// Store trained models in localStorage to keep track
-const TRAINING_IDS_KEY = 'ml_platform_training_ids';
-
+// No need to include /api/v1 prefix as it's already in the baseURL
 export const trainingService = {
+  // This is a mock implementation since there's no list endpoint
   listTrainings: async (): Promise<Training[]> => {
     console.log("[TrainingService] listTrainings called");
     try {
-      // Get training IDs from localStorage
-      const trainingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
+      // Get saved training IDs from localStorage
+      const trainingIdsStr = localStorage.getItem('ml_platform_training_ids');
       if (!trainingIdsStr) {
         console.log("[TrainingService] No training IDs found in localStorage");
         return [];
@@ -44,15 +43,16 @@ export const trainingService = {
   
   getTrainingStatus: async (trainingId: number): Promise<Training> => {
     console.log(`[TrainingService] getTrainingStatus for ID: ${trainingId}`);
-    return apiClient.request<Training>(`/api/v1/training/${trainingId}/status`);
+    // Remove the /api/v1 prefix
+    return apiClient.request<Training>(`/training/${trainingId}/status`);
   },
   
   startTraining: async (data: TrainingCreateRequest): Promise<Training> => {
     console.log("[TrainingService] startTraining called with data:", data);
     
     try {
-      // Make the API request
-      const response = await apiClient.request<Training>('/api/v1/training/start', {
+      // Remove the /api/v1 prefix
+      const response = await apiClient.request<Training>('/training/start', {
         method: 'POST',
         data,
       });
@@ -61,7 +61,7 @@ export const trainingService = {
       
       // Save the training ID to localStorage
       if (response && response.id) {
-        const existingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
+        const existingIdsStr = localStorage.getItem('ml_platform_training_ids');
         let existingIds: number[] = [];
         
         if (existingIdsStr) {
@@ -74,7 +74,7 @@ export const trainingService = {
         
         if (!existingIds.includes(response.id)) {
           existingIds.push(response.id);
-          localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(existingIds));
+          localStorage.setItem('ml_platform_training_ids', JSON.stringify(existingIds));
           console.log("[TrainingService] Added training ID to localStorage:", response.id);
         }
       }
@@ -91,9 +91,9 @@ export const trainingService = {
     console.log(`[TrainingService] stopTraining for ID: ${trainingId}`);
     
     try {
-      // Try the stop endpoint if it exists
+      // Try the stop endpoint if it exists - Remove the /api/v1 prefix
       try {
-        const response = await apiClient.request<Training>(`/api/v1/training/${trainingId}/stop`, {
+        const response = await apiClient.request<Training>(`/training/${trainingId}/stop`, {
           method: 'POST'
         });
         console.log("[TrainingService] Training stopped via API:", response);
@@ -122,7 +122,8 @@ export const trainingService = {
     const token = localStorage.getItem('access_token');
     
     try {
-      const response = await fetch('/api/v1/training/start', {
+      // Make sure to use the correct URL without duplication
+      const response = await fetch('http://localhost:8000/api/v1/training/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +143,7 @@ export const trainingService = {
       
       // Save to localStorage
       if (result && result.id) {
-        const existingIdsStr = localStorage.getItem(TRAINING_IDS_KEY);
+        const existingIdsStr = localStorage.getItem('ml_platform_training_ids');
         let existingIds: number[] = [];
         
         if (existingIdsStr) {
@@ -155,7 +156,7 @@ export const trainingService = {
         
         if (!existingIds.includes(result.id)) {
           existingIds.push(result.id);
-          localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(existingIds));
+          localStorage.setItem('ml_platform_training_ids', JSON.stringify(existingIds));
         }
       }
       

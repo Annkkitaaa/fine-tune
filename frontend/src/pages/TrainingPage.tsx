@@ -32,7 +32,7 @@ export const TrainingPage: React.FC = () => {
     loading,
     error,
     startTraining,
-    directStartTraining, // Added emergency method
+    directStartTraining,
     stopTraining,
     updateTrainingForm,
     resetTrainingForm,
@@ -45,112 +45,133 @@ export const TrainingPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewJob, setShowNewJob] = useState(false);
-  const [processingAction, setProcessingAction] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Fetch models and datasets on component mount
   useEffect(() => {
-    console.log("Component mounted - fetching data");
+    console.log("Component mounted - fetching initial data");
     fetchModels();
     fetchDatasets();
   }, [fetchModels, fetchDatasets]);
 
-  // Enhanced start training with better error handling
+  // Log the values of the form whenever they change
+  useEffect(() => {
+    console.log("Form state changed:", {
+      modelId: trainingForm.modelId,
+      datasetId: trainingForm.datasetId,
+      isModelSelected: Boolean(trainingForm.modelId),
+      isDatasetSelected: Boolean(trainingForm.datasetId)
+    });
+  }, [trainingForm]);
+
   const handleStartTraining = async () => {
     console.log("Start training button clicked");
+    setLocalError(null);
+    
+    // Validate form
+    if (!trainingForm.modelId) {
+      setLocalError("Please select a model");
+      return;
+    }
+    
+    if (!trainingForm.datasetId) {
+      setLocalError("Please select a dataset");
+      return;
+    }
+    
     try {
-      setProcessingAction(true);
-      setLocalError(null);
+      setLocalLoading(true);
       
-      console.log("Form validation:", {
+      console.log("Form data being sent:", {
         modelId: trainingForm.modelId,
         datasetId: trainingForm.datasetId,
-        isValid: Boolean(trainingForm.modelId) && Boolean(trainingForm.datasetId)
+        hyperparameters: trainingForm.hyperparameters
       });
+
+      await startTraining();
+      console.log("Training started successfully");
       
-      if (!trainingForm.modelId || !trainingForm.datasetId) {
-        setLocalError("Please select a model and dataset");
-        return;
-      }
-      
-      // Try regular method first
-      try {
-        console.log("Attempting to start training via normal method");
-        await startTraining();
-        console.log("Training started successfully!");
-        setShowNewJob(false);
-        resetTrainingForm();
-      } catch (err) {
-        console.error("Regular start failed, trying direct method:", err);
-        // If regular method fails, try direct method
-        await directStartTraining();
-        console.log("Training started via direct method!");
-        setShowNewJob(false);
-        resetTrainingForm();
-      }
+      // Reset form and close panel
+      setShowNewJob(false);
+      resetTrainingForm();
     } catch (error) {
-      console.error('Failed to start training:', error);
+      console.error("Error starting training:", error);
       setLocalError(error instanceof Error ? error.message : 'Failed to start training');
     } finally {
-      setProcessingAction(false);
+      setLocalLoading(false);
     }
   };
 
-  // Handle stopping a training job
-  const handleStopTraining = async (trainingId: number) => {
-    console.log(`Attempting to stop training: ${trainingId}`);
+  const handleDirectStart = async () => {
+    console.log("Direct start button clicked");
+    setLocalError(null);
+    
     try {
-      setProcessingAction(true);
-      await stopTraining(trainingId);
-      console.log("Training stopped successfully");
+      setLocalLoading(true);
+      await directStartTraining();
+      console.log("Direct training start succeeded");
+      
+      // Reset form and close panel
+      setShowNewJob(false);
+      resetTrainingForm();
     } catch (error) {
-      console.error('Failed to stop training:', error);
+      console.error("Error with direct start:", error);
+      setLocalError(error instanceof Error ? error.message : 'Failed to start training');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const handleStopTraining = async (trainingId: number) => {
+    try {
+      setLocalLoading(true);
+      await stopTraining(trainingId);
+    } catch (error) {
+      console.error("Error stopping training:", error);
       setLocalError(error instanceof Error ? error.message : 'Failed to stop training');
     } finally {
-      setProcessingAction(false);
+      setLocalLoading(false);
     }
   };
 
-  // Handle refreshing the training list
-  const handleRefresh = async () => {
-    console.log("Refresh button clicked");
-    try {
-      setProcessingAction(true);
-      await refreshTrainings();
-      console.log("Training list refreshed");
-    } catch (error) {
-      console.error('Failed to refresh trainings:', error);
-      setLocalError(error instanceof Error ? error.message : 'Failed to refresh trainings');
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+  // Convert models and datasets to select options
+  const modelOptions = React.useMemo(() => {
+    if (!models || !Array.isArray(models)) return [];
+    return models.map(model => ({
+      value: String(model.id),
+      label: model.name || `Model ${model.id}`
+    }));
+  }, [models]);
 
-  // Prepare model and dataset options for select inputs
-  const modelOptions = models && Array.isArray(models) ? models.map(model => ({
-    value: model.id.toString(),
-    label: model.name
-  })) : [];
-
-  const datasetOptions = datasets && Array.isArray(datasets) ? datasets.map(dataset => ({
-    value: dataset.id.toString(),
-    label: dataset.name || `Dataset ${dataset.id}`
-  })) : [];
+  const datasetOptions = React.useMemo(() => {
+    if (!datasets || !Array.isArray(datasets)) return [];
+    return datasets.map(dataset => ({
+      value: String(dataset.id),
+      label: dataset.name || `Dataset ${dataset.id}`
+    }));
+  }, [datasets]);
 
   // Filter trainings based on search query
-  const filteredTrainings = trainings.filter(training => {
-    if (!searchQuery) return true;
+  const filteredTrainings = React.useMemo(() => {
+    if (!searchQuery || !trainings || !Array.isArray(trainings)) return trainings || [];
     
     const searchTerm = searchQuery.toLowerCase();
-    const modelName = modelOptions.find(m => m.value === training.model_id.toString())?.label || '';
-    const datasetName = datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || '';
-    
-    return modelName.toLowerCase().includes(searchTerm) ||
-           datasetName.toLowerCase().includes(searchTerm);
-  });
+    return trainings.filter(training => {
+      const modelName = modelOptions.find(m => m.value === training.model_id.toString())?.label || '';
+      const datasetName = datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || '';
+      
+      return modelName.toLowerCase().includes(searchTerm) ||
+             datasetName.toLowerCase().includes(searchTerm);
+    });
+  }, [trainings, searchQuery, modelOptions, datasetOptions]);
 
-  // Handle loading state
-  if ((loading && !trainings.length) || modelsLoading || datasetsLoading) {
+  // Determine if the form is ready for submission
+  const isFormValid = Boolean(trainingForm.modelId) && Boolean(trainingForm.datasetId);
+  const isSubmitDisabled = loading || localLoading || !isFormValid;
+
+  // Show loading state
+  if ((loading && !trainings?.length) || modelsLoading || datasetsLoading) {
     return (
       <div className="flex items-center justify-center h-full py-20">
         <div className="text-center">
@@ -161,11 +182,13 @@ export const TrainingPage: React.FC = () => {
     );
   }
 
-  console.log("Rendering training dashboard with:", {
-    trainingsCount: trainings.length,
-    modelsCount: modelOptions.length,
-    datasetsCount: datasetOptions.length,
-    formState: trainingForm
+  // Log debug information
+  console.log("Rendering TrainingPage with:", {
+    modelOptionsCount: modelOptions.length,
+    datasetOptionsCount: datasetOptions.length,
+    trainingsCount: trainings?.length || 0,
+    isFormValid,
+    isSubmitDisabled
   });
 
   return (
@@ -175,10 +198,10 @@ export const TrainingPage: React.FC = () => {
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
-            onClick={handleRefresh}
-            disabled={processingAction}
+            onClick={refreshTrainings}
+            disabled={loading || localLoading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${processingAction ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading || localLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowNewJob(!showNewJob)}>
@@ -288,12 +311,17 @@ export const TrainingPage: React.FC = () => {
               >
                 Cancel
               </Button>
+              
+              {/* Primary Start Training Button - Fixed to not be disabled when valid */}
               <Button
                 onClick={handleStartTraining}
-                disabled={processingAction || !trainingForm.modelId || !trainingForm.datasetId}
-                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isSubmitDisabled}
+                style={{
+                  backgroundColor: isFormValid ? '#3b82f6' : '#94a3b8',
+                  cursor: isFormValid ? 'pointer' : 'not-allowed'
+                }}
               >
-                {processingAction ? (
+                {(loading || localLoading) ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Starting...
@@ -303,22 +331,34 @@ export const TrainingPage: React.FC = () => {
                 )}
               </Button>
               
-              {/* Emergency button for direct API call */}
+              {/* Emergency direct method button */}
               <Button
-                onClick={directStartTraining}
-                disabled={processingAction || !trainingForm.modelId || !trainingForm.datasetId}
-                className="bg-red-600 hover:bg-red-700 flex items-center"
+                onClick={handleDirectStart}
+                disabled={isSubmitDisabled}
+                style={{
+                  backgroundColor: isFormValid ? '#dc2626' : '#94a3b8',
+                  cursor: isFormValid ? 'pointer' : 'not-allowed'
+                }}
               >
                 <Zap className="w-4 h-4 mr-2" />
-                Direct Start
+                Emergency Start
               </Button>
+            </div>
+            
+            {/* Debug info */}
+            <div className="mt-4 text-xs text-gray-500 border-t pt-2">
+              <p>Debug info:</p>
+              <p>Model ID: {trainingForm.modelId || 'none'}</p>
+              <p>Dataset ID: {trainingForm.datasetId || 'none'}</p>
+              <p>Form valid: {isFormValid ? 'Yes' : 'No'}</p>
+              <p>Button disabled: {isSubmitDisabled ? 'Yes' : 'No'}</p>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Performance Metrics - Only show if there are trainings */}
-      {trainings.length > 0 && (
+      {trainings && trainings.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -386,7 +426,7 @@ export const TrainingPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredTrainings.length === 0 ? (
+            {(!filteredTrainings || filteredTrainings.length === 0) ? (
               <div className="text-center py-6">
                 <p className="text-gray-500 dark:text-gray-400">
                   No training jobs found. {searchQuery ? 'Try a different search term.' : 'Start your first training job!'}
@@ -420,7 +460,7 @@ export const TrainingPage: React.FC = () => {
                           size="sm"
                           variant="destructive"
                           onClick={() => handleStopTraining(training.id)}
-                          disabled={processingAction}
+                          disabled={loading || localLoading}
                         >
                           <Pause className="w-4 h-4" />
                         </Button>
