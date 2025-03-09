@@ -53,9 +53,33 @@ export const PipelinePage: React.FC = () => {
     // Initialize page
     useEffect(() => {
       console.log("PipelinePage mounted");
-      refreshPipelines();
-      fetchDatasets();
-      setPageLoading(false);
+      
+      const initData = async () => {
+        try {
+          setPageLoading(true);
+          setPageError(null);
+          
+          // Load data in sequence to avoid overloading the server
+          await fetchDatasets()
+            .catch(err => {
+              console.error("Error fetching datasets:", err);
+              // Continue even if datasets fail to load
+            });
+          
+          await refreshPipelines()
+            .catch(err => {
+              console.error("Error fetching pipelines:", err);
+              // Continue with empty pipelines array
+            });
+        } catch (error) {
+          console.error("Error during page initialization:", error);
+          setPageError("Failed to load some data. You may need to refresh the page.");
+        } finally {
+          setPageLoading(false);
+        }
+      };
+      
+      initData();
     }, [refreshPipelines, fetchDatasets]);
 
     // Debug logging
