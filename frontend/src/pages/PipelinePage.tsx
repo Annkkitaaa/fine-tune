@@ -1,4 +1,3 @@
-// src/pages/PipelinePage.tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -45,10 +44,43 @@ export const PipelinePage: React.FC = () => {
       refreshPipelines
     } = usePipeline();
 
-    const { datasets, loading: datasetsLoading, fetchDatasets } = useDatasets();
+    const { 
+      datasets: datasetObjects, 
+      loading: datasetsLoading, 
+      error: datasetsError, 
+      fetchDatasets 
+    } = useDatasets();
+    
     const utils = usePipelineUtils();
 
+    // New state to hold formatted options for Select component
+    const [datasetOptions, setDatasetOptions] = useState<Array<{value: string, label: string}>>([]);
     const [showCreateForm, setShowCreateForm] = useState(false);
+
+    // Add debug logging for datasets
+    useEffect(() => {
+      console.log("Raw dataset objects:", datasetObjects);
+      if (datasetObjects?.length > 0) {
+        console.log("First dataset properties:", Object.keys(datasetObjects[0]));
+      }
+    }, [datasetObjects]);
+
+    // Transform raw datasets into options format when datasets change
+    useEffect(() => {
+      if (datasetObjects && datasetObjects.length > 0) {
+        // Extract correct properties from dataset objects
+        const options = datasetObjects.map(dataset => ({
+          value: dataset.id?.toString() || "",
+          label: dataset.name || `Dataset ${dataset.id || "Unknown"}`
+        }));
+        
+        console.log("Created dataset options for Select:", options);
+        setDatasetOptions(options);
+      } else {
+        console.log("No datasets available for options", datasetObjects);
+        setDatasetOptions([]);
+      }
+    }, [datasetObjects]);
 
     // Initialize page
     useEffect(() => {
@@ -86,14 +118,15 @@ export const PipelinePage: React.FC = () => {
     useEffect(() => {
       console.log("PipelinePage state:", {
         pipelines: pipelines?.length || 0,
-        datasets: datasets?.length || 0,
+        datasets: datasetObjects?.length || 0,
+        datasetOptions: datasetOptions?.length || 0,
         loading,
         datasetsLoading,
         pageLoading,
         error,
         pageError
       });
-    }, [pipelines, datasets, loading, datasetsLoading, pageLoading, error, pageError]);
+    }, [pipelines, datasetObjects, datasetOptions, loading, datasetsLoading, pageLoading, error, pageError]);
 
     const handleCreatePipeline = async () => {
       try {
@@ -171,19 +204,22 @@ export const PipelinePage: React.FC = () => {
               <div className="space-y-6">
                 <Select
                   label="Dataset"
-                  options={datasets || []}
+                  options={datasetOptions}
                   value={pipelineForm.datasetId}
                   onChange={(value) => {
                     console.log("Dataset selected:", value);
+                    console.log("Available options:", datasetOptions);
                     updatePipelineForm({ datasetId: value });
                   }}
                   isLoading={datasetsLoading}
+                  error={datasetsError || undefined}
                 />
 
                 {/* Debug info */}
                 <div className="text-xs text-gray-500 p-2 border-t mt-2">
                   <p>Form state: Dataset ID: {pipelineForm.datasetId || 'none'}</p>
-                  <p>Datasets loaded: {datasets?.length || 0}</p>
+                  <p>Datasets loaded: {datasetObjects?.length || 0}</p>
+                  <p>Dataset options: {datasetOptions?.length || 0}</p>
                 </div>
 
                 {/* Preprocessing Settings */}
@@ -421,7 +457,7 @@ export const PipelinePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {!pipelines || pipelines.length === 0 ? (
+            {!pipelines || pipelines.length === 0 ? (
                 <div className="text-center py-6">
                   <p className="text-gray-500 dark:text-gray-400">
                     No pipelines found. Create your first pipeline!
@@ -439,8 +475,8 @@ export const PipelinePage: React.FC = () => {
                           Pipeline #{pipeline.pipeline_id}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Dataset: {datasets && datasets.find ? 
-                            datasets.find(d => d.value === pipeline.dataset_id.toString())?.label || 
+                          Dataset: {datasetOptions.find ? 
+                            datasetOptions.find(d => d.value === pipeline.dataset_id.toString())?.label || 
                             `Dataset ${pipeline.dataset_id}` : 
                             `Dataset ${pipeline.dataset_id}`}
                         </p>

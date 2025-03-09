@@ -1,4 +1,3 @@
-// src/lib/api-client.ts
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 
 // Make sure this matches your backend URL
@@ -14,19 +13,21 @@ class ApiClient {
   private instance: AxiosInstance;
 
   constructor() {
-    // Ensure the API_URL already includes /api/v1
-    const baseURL = API_URL.endsWith('/api/v1') ? API_URL : `${API_URL}/api/v1`;
+    // Use the correct base URL without any path
+    const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
     
     this.instance = axios.create({
       baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
-      // Increased timeout to prevent hanging requests
       timeout: 30000, // 30 seconds
     });
-  
+
     this.setupInterceptors();
+    
+    // Log the base URL for debugging
+    console.log("API client initialized with baseURL:", baseURL);
   }
 
   private setupInterceptors() {

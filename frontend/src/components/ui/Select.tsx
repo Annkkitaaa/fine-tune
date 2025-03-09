@@ -11,6 +11,7 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
   options: Option[];
   error?: string;
   onChange: (value: string) => void;
+  isLoading?: boolean;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -21,6 +22,7 @@ export const Select: React.FC<SelectProps> = ({
   id,
   value,
   onChange,
+  isLoading,
   ...props
 }) => {
   return (
@@ -47,14 +49,17 @@ export const Select: React.FC<SelectProps> = ({
           'text-gray-900 dark:text-gray-100',
           className
         )}
+        disabled={isLoading}
         {...props}
       >
+        <option value="">Select a dataset</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
       </select>
+      {isLoading && <p className="mt-1 text-sm text-gray-500">Loading datasets...</p>}
       {error && (
         <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}

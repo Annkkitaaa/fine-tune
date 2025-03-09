@@ -1,4 +1,3 @@
-// src/lib/services/pipeline.ts
 import { apiClient } from '@/lib/api-client';
 import { 
   Pipeline, 
@@ -10,7 +9,6 @@ console.log("API URL:", import.meta.env.VITE_API_URL);
 export const pipelineService = {
   listPipelines: () =>
     apiClient.withRetry(() => 
-      // Remove /api/v1 from here since it's already in the base URL
       apiClient.request<Pipeline[]>('/pipeline/list')
     ),
 
@@ -63,7 +61,7 @@ export const pipelineService = {
   },
 
   deletePipeline: (pipelineId: string) =>
-    apiClient.request(`/pipeline/${pipelineId}`, {
+    apiClient.request(`//pipeline/${pipelineId}`, {
       method: 'DELETE',
     }),
 };

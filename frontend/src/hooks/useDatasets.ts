@@ -1,5 +1,5 @@
 // src/hooks/useDatasets.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Dataset } from '@/types/dataset.types';
 import { datasetsService } from '@/services/datasets.service';
 
@@ -25,6 +25,8 @@ export function useDatasets(options: UseDatasetOptions = {}) {
         limit: options.pageSize || 50,
       });
 
+      console.log("Raw datasets response:", response);
+      
       if (Array.isArray(response)) {
         if (page === 0) {
           setDatasets(response);
@@ -33,10 +35,21 @@ export function useDatasets(options: UseDatasetOptions = {}) {
         }
         setHasMore(response.length === (options.pageSize || 50));
         setCurrentPage(page);
+        
+        // Debug the dataset structure
+        if (response.length > 0) {
+          console.log("First dataset fields:", Object.keys(response[0]));
+          console.log("First dataset sample:", JSON.stringify(response[0], null, 2));
+        }
+      } else {
+        console.error("Invalid response format for datasets:", response);
       }
+      
+      return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch datasets');
       console.error('Error fetching datasets:', err);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -90,6 +103,11 @@ export function useDatasets(options: UseDatasetOptions = {}) {
       fetchDatasets(currentPage + 1);
     }
   }, [loading, hasMore, currentPage, fetchDatasets]);
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchDatasets(0);
+  }, []);
 
   return {
     datasets,
