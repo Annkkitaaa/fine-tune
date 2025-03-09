@@ -77,24 +77,40 @@ export const DatasetsPage: React.FC = () => {
   };
 
   
-const handleUploadDataset = async () => {
-  if (!selectedFile) {
-    setUploadError('Please select a file');
-    return;
-  }
-
-  try {
-    setUploadError(null);
-    
-    // Upload the file
-    await uploadDataset(selectedFile);
-    
-    // Reset form after successful upload
-    resetForm();
-  } catch (error) {
-    console.error('Upload error:', error);
-    setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
-  }
+  const handleUploadDataset = async () => {
+    if (!selectedFile) {
+      setUploadError('Please select a file');
+      return;
+    }
+  
+    try {
+      setUploadError(null);
+      
+      // Prepare preprocessing config
+      const preprocessing_config = {
+        handle_missing: datasetForm.handleMissingData,
+        missing_strategy: datasetForm.missingStrategy,
+        handle_outliers: datasetForm.handleOutliers,
+        outlier_method: datasetForm.outlierMethod,
+        outlier_threshold: datasetForm.outlierThreshold,
+        scaling: datasetForm.enableScaling,
+        feature_engineering: datasetForm.enableFeatureEngineering,
+      };
+      
+      // Upload the file with metadata
+      await uploadDataset(selectedFile, {
+        name: datasetForm.name,
+        description: datasetForm.description,
+        format: datasetForm.format,
+        preprocessing_config
+      });
+      
+      // Reset form after successful upload
+      resetForm();
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
+    }
   };
   
   const handleDeleteDataset = async (datasetId: number) => {

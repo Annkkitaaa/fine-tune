@@ -42,12 +42,12 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     }
   }, [currentPage, options.pageSize]);
 
-  const uploadDataset = useCallback(async (file: File) => {
+  const uploadDataset = useCallback(async (file: File, metadata?: any) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await datasetsService.uploadDataset(file);
+      const response = await datasetsService.uploadDataset(file, metadata);
       
       // Add the new dataset to the list
       setDatasets(prev => [response, ...prev]);
