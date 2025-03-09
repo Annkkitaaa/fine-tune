@@ -4,41 +4,28 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Switch } from '@/components/ui/Switch';
-import { Slider } from '@/components/ui/Slider';
 import { Alert, AlertDescription} from '@/components/ui/Alert';
 import { Loader2, Upload, Search, Filter, AlertCircle } from 'lucide-react';
 import { useDatasets } from '@/hooks/useDatasets';
-import { DatasetFormState, SelectOption } from '@/types/dataset.types';
+import { SelectOption } from '@/types/dataset.types';
+
+// Simplified form state without preprocessing options
+interface DatasetFormState {
+  name: string;
+  description: string;
+  format: string;
+}
 
 const initialFormState: DatasetFormState = {
   name: '',
   description: '',
   format: 'csv',
-  handleMissingData: true,
-  missingStrategy: 'mean',
-  handleOutliers: true,
-  outlierMethod: 'zscore',
-  outlierThreshold: 3,
-  enableScaling: true,
-  enableFeatureEngineering: false,
 };
 
 const formats: SelectOption[] = [
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
   { value: 'parquet', label: 'Parquet' },
-];
-
-const missingStrategies: SelectOption[] = [
-  { value: 'mean', label: 'Mean' },
-  { value: 'median', label: 'Median' },
-  { value: 'mode', label: 'Mode' },
-];
-
-const outlierMethods: SelectOption[] = [
-  { value: 'zscore', label: 'Z-Score' },
-  { value: 'iqr', label: 'IQR' },
 ];
 
 export const DatasetsPage: React.FC = () => {
@@ -76,37 +63,23 @@ export const DatasetsPage: React.FC = () => {
     }
   };
 
-  
   const handleUploadDataset = async () => {
     if (!selectedFile) {
       setUploadError('Please select a file');
       return;
     }
-  
+
     try {
       setUploadError(null);
       
-      // Prepare preprocessing config
-      const preprocessing_config = {
-        handle_missing: datasetForm.handleMissingData,
-        missing_strategy: datasetForm.missingStrategy,
-        handle_outliers: datasetForm.handleOutliers,
-        outlier_method: datasetForm.outlierMethod,
-        outlier_threshold: datasetForm.outlierThreshold,
-        scaling: datasetForm.enableScaling,
-        feature_engineering: datasetForm.enableFeatureEngineering,
-      };
-      
-      // Upload the file with metadata
-      await uploadDataset(selectedFile, {
-        name: datasetForm.name,
-        description: datasetForm.description,
-        format: datasetForm.format,
-        preprocessing_config
-      });
+      // Upload the file with basic metadata only
+      await uploadDataset(selectedFile, datasetForm.name, datasetForm.description, datasetForm.format);
       
       // Reset form after successful upload
       resetForm();
+      
+      // Refresh the dataset list
+      fetchDatasets();
     } catch (error) {
       console.error('Upload error:', error);
       setUploadError(error instanceof Error ? error.message : 'Failed to upload dataset');
@@ -136,8 +109,8 @@ export const DatasetsPage: React.FC = () => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase().trim();
     return (
-      dataset.name.toLowerCase().includes(query) ||
-      dataset.format.toLowerCase().includes(query)
+      (dataset.name?.toLowerCase() || '').includes(query) ||
+      (dataset.format?.toLowerCase() || '').includes(query)
     );
   }) || [];
 
@@ -205,59 +178,6 @@ export const DatasetsPage: React.FC = () => {
                 accept=".csv,.json,.parquet"
                 required
               />
-              <div className="col-span-2">
-                <h3 className="text-lg font-medium mb-4">Preprocessing Settings</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Switch
-                    label="Handle Missing Data"
-                    checked={datasetForm.handleMissingData}
-                    onChange={(checked) => setDatasetForm({ ...datasetForm, handleMissingData: checked })}
-                  />
-                  {datasetForm.handleMissingData && (
-                    <Select
-                      label="Missing Data Strategy"
-                      options={missingStrategies}
-                      value={datasetForm.missingStrategy}
-                      onChange={(value) => setDatasetForm({ ...datasetForm, missingStrategy: value })}
-                    />
-                  )}
-                  <Switch
-                    label="Handle Outliers"
-                    checked={datasetForm.handleOutliers}
-                    onChange={(checked) => setDatasetForm({ ...datasetForm, handleOutliers: checked })}
-                  />
-                  {datasetForm.handleOutliers && (
-                    <>
-                      <Select
-                        label="Outlier Method"
-                        options={outlierMethods}
-                        value={datasetForm.outlierMethod}
-                        onChange={(value) => setDatasetForm({ ...datasetForm, outlierMethod: value })}
-                      />
-                      <div className="col-span-2">
-                        <Slider
-                          label="Outlier Threshold"
-                          min={1}
-                          max={5}
-                          step={0.1}
-                          value={datasetForm.outlierThreshold}
-                          onChange={(value) => setDatasetForm({ ...datasetForm, outlierThreshold: value })}
-                        />
-                      </div>
-                    </>
-                  )}
-                  <Switch
-                    label="Enable Scaling"
-                    checked={datasetForm.enableScaling}
-                    onChange={(checked) => setDatasetForm({ ...datasetForm, enableScaling: checked })}
-                  />
-                  <Switch
-                    label="Enable Feature Engineering"
-                    checked={datasetForm.enableFeatureEngineering}
-                    onChange={(checked) => setDatasetForm({ ...datasetForm, enableFeatureEngineering: checked })}
-                  />
-                </div>
-              </div>
             </div>
             <div className="mt-6 flex justify-end space-x-4">
               <Button variant="secondary" onClick={resetForm}>
@@ -331,22 +251,24 @@ export const DatasetsPage: React.FC = () => {
                 {filteredDatasets.map((dataset) => (
                   <tr key={dataset.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {dataset.name}
+                      {dataset.name || 'Unnamed Dataset'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.format.toUpperCase()}
+                      {dataset.format ? dataset.format.toUpperCase() : 'Unknown'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {formatFileSize(dataset.size)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.num_rows?.toLocaleString()}
+                      {dataset.num_rows?.toLocaleString() || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {dataset.num_features}
+                      {dataset.num_features || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {new Date(dataset.created_at).toLocaleDateString()}
+                      {dataset.created_at 
+                        ? new Date(dataset.created_at).toLocaleDateString() 
+                        : 'Invalid Date'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                       <Button
@@ -361,6 +283,13 @@ export const DatasetsPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {filteredDatasets.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No datasets found
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
