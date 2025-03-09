@@ -1,59 +1,84 @@
 // src/lib/types/training.ts
+
+// Available training states
+export type TrainingState = 'queued' | 'running' | 'completed' | 'failed' | 'stopped';
+
+// Optimizer configuration
+export interface OptimizerConfig {
+  name: string;
+  learning_rate?: number;
+  beta1?: number;
+  beta2?: number;
+  epsilon?: number;
+  weight_decay?: number;
+}
+
+// Training hyperparameters
+export interface TrainingHyperparameters {
+  learning_rate: number;
+  batch_size: number;
+  epochs: number;
+  optimizer: OptimizerConfig;
+  [key: string]: any; // Allow additional hyperparameters
+}
+
+// Training metrics
 export interface TrainingMetrics {
-    accuracy: number;
-    loss: number;
-    precision?: number;
-    recall?: number;
-    f1_score?: number;
-  }
-  
-  export interface TrainingStatus {
-    cpu_usage: number;
-    memory_usage: number;
-    gpu_usage: number;
-    epochs_completed: number;
-    current_epoch: number;
-    total_epochs: number;
-    training_time: number;
-    estimated_time_remaining: number;
-  }
-  
-  export interface Training {
-    id: number;
-    model_id: number;
-    dataset_id: number;
-    status: TrainingState;
-    metrics?: TrainingMetrics;
-    hyperparameters: TrainingHyperparameters;
-    start_time?: string;
-    end_time?: string;
-    created_at: string;
-    updated_at: string;
-    duration?: number;
-    error_message?: string;
-  }
-  
-  export type TrainingState = 'queued' | 'running' | 'completed' | 'failed' | 'stopped';
-  
-  export interface TrainingHyperparameters {
-    learning_rate: number;
-    batch_size: number;
-    epochs: number;
+  loss?: number;
+  accuracy?: number;
+  epochs_completed?: number;
+  training_time?: number;
+  cpu_usage?: number;
+  memory_usage?: number;
+  gpu_usage?: number;
+  [key: string]: any; // Allow additional metrics
+}
+
+// Training model
+export interface Training {
+  id: number;
+  model_id: number;
+  dataset_id: number;
+  owner_id: number;
+  project_id?: number;
+  status: TrainingState;
+  hyperparameters: TrainingHyperparameters;
+  metrics?: TrainingMetrics;
+  error_message?: string;
+  start_time?: string;
+  end_time?: string;
+  duration?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Request to create a new training job
+export interface TrainingCreateRequest {
+  model_id: number;
+  dataset_id: number;
+  hyperparameters: TrainingHyperparameters;
+}
+
+// Form state for training form
+export interface TrainingFormState {
+  modelId: string;
+  datasetId: string;
+  hyperparameters: TrainingHyperparameters;
+}
+
+// Default form values
+export const DEFAULT_TRAINING_FORM: TrainingFormState = {
+  modelId: '',
+  datasetId: '',
+  hyperparameters: {
+    learning_rate: 0.001,
+    batch_size: 32,
+    epochs: 10,
     optimizer: {
-      name: string;
-      beta1: number;
-      beta2: number;
-    };
+      name: 'Adam',
+      beta1: 0.9,
+      beta2: 0.999,
+      epsilon: 1e-7
+    }
   }
-  
-  export interface TrainingFormState {
-    modelId: string;
-    datasetId: string;
-    hyperparameters: TrainingHyperparameters;
-  }
-  
-  export interface TrainingCreateRequest {
-    model_id: number;
-    dataset_id: number;
-    hyperparameters: TrainingHyperparameters;
-  }
+};
