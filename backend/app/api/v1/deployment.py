@@ -2,15 +2,17 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.api.deps import get_current_user, get_db
-from app.schemas.deployment import DeploymentCreate, Deployment
+from app.schemas.deployment import DeploymentCreate, Deployment, SpheronDeploymentCreate
 from app.models.deployment import Deployment as DeploymentModel
 from app.services.deployment.service import ModelDeploymentService
 from app.models.model import MLModel
 from app.core.config import settings
 
 router = APIRouter()
+
 
 @router.post("/{deployment_id}/restart")
 async def restart_deployment(
@@ -66,6 +68,66 @@ async def restart_deployment(
         raise HTTPException(
             status_code=400,
             detail=f"Error restarting deployment: {str(e)}"
+        )
+    
+# Add a new endpoint for Spheron deployments
+@router.post("/spheron", response_model=Deployment)
+async def deploy_with_spheron(
+    *,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+    deployment_in: SpheronDeploymentCreate
+):
+    """Deploy model using Spheron Protocol"""
+    try:
+        # Get the model
+        model = db.query(MLModel).filter(
+            MLModel.id == deployment_in.model_id,
+            MLModel.owner_id == current_user.id
+        ).first()
+        
+        if not model:
+            raise HTTPException(404, "Model not found")
+        
+        # Create deployment record with spheron provider
+        deployment = DeploymentModel(
+            name=deployment_in.name,
+            description=deployment_in.description,
+            model_id=deployment_in.model_id,
+            provider="spheron",
+            config=deployment_in.config,
+            status="pending",
+            owner_id=current_user.id
+        )
+        
+        db.add(deployment)
+        db.commit()
+        db.refresh(deployment)
+        
+        # Initialize deployment service
+        service = ModelDeploymentService(
+            model_path=model.file_path,
+            preprocessor_path=model.preprocessor_path,
+            framework=model.framework,
+            config=deployment_in.config
+        )
+        
+        # Deploy with Spheron
+        spheron_result = await service.deploy_with_spheron()
+        
+        # Update deployment with Spheron details
+        deployment.provider_deployment_id = spheron_result.get("deployment_id")
+        deployment.endpoint_url = spheron_result.get("endpoint_url")
+        deployment.status = spheron_result.get("status", "pending")
+        db.commit()
+        
+        return deployment
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error creating Spheron deployment: {str(e)}"
         )
 
 async def deploy_model_task(
