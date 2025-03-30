@@ -1,3 +1,4 @@
+// src/components/DeploymentForm.tsx
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -319,7 +320,7 @@ export const DeploymentForm: React.FC<DeploymentFormProps> = ({
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !form.name || !form.modelId}
           >
             <Rocket className="w-4 h-4 mr-2" />
             {loading ? 'Deploying...' : 'Deploy'}
