@@ -1,3 +1,4 @@
+// src/lib/services/pipeline.ts
 import { apiClient } from '@/lib/api-client';
 import { 
   Pipeline, 
@@ -12,8 +13,8 @@ export const pipelineService = {
       apiClient.request<Pipeline[]>('/pipeline/list')
     ),
 
-  getPipeline: (id: string) =>
-    apiClient.request<Pipeline>(`/pipeline/${id}`),
+  getPipeline: (pipelineId: string) =>
+    apiClient.request<Pipeline>(`/pipeline/${pipelineId}`),
 
   createPipeline: (data: PipelineFormState) => {
     // Transform data structure to match the API's expected format
@@ -61,7 +62,7 @@ export const pipelineService = {
   },
 
   deletePipeline: (pipelineId: string) =>
-    apiClient.request(`//pipeline/${pipelineId}`, {
+    apiClient.request(`/pipeline/${pipelineId}`, {
       method: 'DELETE',
     }),
 };

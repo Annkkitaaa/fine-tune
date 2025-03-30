@@ -15,17 +15,246 @@ import {
   Database,
   BarChart2,
   RefreshCcw,
-  Download
+  Download,
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { MetricsVisualization } from '@/components/MetricsVisualization';
 import { usePipeline } from '@/hooks/usePipeline';
 import { usePipelineUtils } from '@/hooks/usePipelineUtils';
 import { useDatasets } from '@/hooks/useDatasets';
+import { pipelineService } from '@/lib/services/pipeline';
 import { 
   AUGMENTATION_METHODS, 
   MISSING_STRATEGIES, 
   OUTLIER_METHODS 
 } from '@/lib/constants/pipeline';
+
+// Pipeline Details Component
+const PipelineDetails = ({ pipeline, datasetName, onClose }) => {
+  const utils = usePipelineUtils();
+  
+  // Add debugging to see what data we're getting
+  console.log("Pipeline details:", pipeline);
+  console.log("Pipeline results:", pipeline.results);
+  
+  // Check if the results object is empty
+  const hasResults = pipeline.results && 
+                     Object.keys(pipeline.results).length > 0 && 
+                     Object.values(pipeline.results).some(value => value !== null && value !== undefined);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold">Pipeline Details</h3>
+            <Button
+              variant="ghost"
+              onClick={onClose}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between">
+              <div>
+                <h3 className="text-xl font-medium">
+                  Pipeline #{pipeline.pipeline_id}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Dataset: {datasetName || `Dataset ${pipeline.dataset_id}`}
+                </p>
+              </div>
+              <div>
+                <span
+                  className={`px-3 py-1 text-sm font-semibold rounded-full ${utils.getStatusColor(
+                    pipeline.status
+                  )}`}
+                >
+                  {pipeline.status}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="flex items-center space-x-2 text-sm">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span>{new Date(pipeline.created_at).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm">
+                <Database className="w-4 h-4 text-gray-400" />
+                <span>{utils.formatProcessedData(pipeline.results?.processed_rows || 0)}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm">
+                <BarChart2 className="w-4 h-4 text-gray-400" />
+                <span>{utils.formatDuration(pipeline.execution_time || 0)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-6 mt-6">
+              <h4 className="text-lg font-medium">Analysis Results</h4>
+              
+              {!hasResults ? (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-center py-8">
+                      <Database className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <h4 className="text-lg font-medium mb-2">No Detailed Results Available</h4>
+                      <p className="text-gray-500">
+                        This pipeline completed successfully, but no detailed analysis results are available.
+                      </p>
+                      <p className="text-gray-500 text-sm mt-2">
+                        Try running the pipeline with different settings or checking the configuration.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {pipeline.results?.correlation_matrix && (
+                      <Card>
+                        <CardHeader>
+                          <h4 className="text-md font-medium">Correlation Analysis</h4>
+                        </CardHeader>
+                        <CardContent>
+                          <MetricsVisualization
+                            type="heatmap"
+                            data={utils.transformCorrelationMatrix(pipeline.results.correlation_matrix)}
+                            title="Feature Correlations"
+                            height={300}
+                          />
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {pipeline.results?.feature_importance && (
+                      <Card>
+                        <CardHeader>
+                          <h4 className="text-md font-medium">Feature Importance</h4>
+                        </CardHeader>
+                        <CardContent>
+                          <MetricsVisualization
+                            type="bar"
+                            data={utils.transformFeatureImportance(pipeline.results.feature_importance)}
+                            title="Feature Importance Scores"
+                            xKey="feature"
+                            yKey="importance"
+                            height={300}
+                          />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  {pipeline.results?.data_quality_report && (
+                    <Card>
+                      <CardHeader>
+                        <h4 className="text-md font-medium">Data Quality Report</h4>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Missing Values</p>
+                            <p className="text-2xl font-medium">
+                              {pipeline.results.data_quality_report.missing_values}%
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Outliers Detected</p>
+                            <p className="text-2xl font-medium">
+                              {pipeline.results.data_quality_report.outliers_count}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Duplicate Rows</p>
+                            <p className="text-2xl font-medium">
+                              {pipeline.results.data_quality_report.duplicate_rows}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Data Completeness</p>
+                            <p className="text-2xl font-medium">
+                              {pipeline.results.data_quality_report.completeness}%
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {pipeline.results?.preprocessing_summary && (
+                    <Card>
+                      <CardHeader>
+                        <h4 className="text-md font-medium">Preprocessing Summary</h4>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm">Missing Values Handled:</span>
+                              <span className="font-medium">{pipeline.results.preprocessing_summary.missing_values_handled || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm">Outliers Removed:</span>
+                              <span className="font-medium">{pipeline.results.preprocessing_summary.outliers_removed || 0}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm">Features Scaled:</span>
+                              <span className="font-medium">{pipeline.results.preprocessing_summary.features_scaled || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm">Features Engineered:</span>
+                              <span className="font-medium">{pipeline.results.preprocessing_summary.features_engineered || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+            </div>
+
+            {pipeline.error_message && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg mt-4">
+                <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-5 h-5" />
+                  <div>
+                    <h4 className="font-medium">Error</h4>
+                    <p className="text-sm">{pipeline.error_message}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-8 flex justify-end space-x-4">
+              {pipeline.status === 'completed' && pipeline.results?.download_url && (
+                <Button
+                  variant="secondary"
+                  onClick={() => window.location.href = pipeline.results.download_url}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Results
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={onClose}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Error boundary component
 const ErrorFallback = ({ error, resetErrorBoundary }) => (
@@ -51,6 +280,7 @@ export const PipelinePage = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [datasetOptions, setDatasetOptions] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedPipeline, setSelectedPipeline] = useState(null);
   
   // Use refs to track if initialization has been done
   const initialized = useRef(false);
@@ -154,6 +384,33 @@ export const PipelinePage = () => {
       setPageError(error instanceof Error ? error.message : 'Failed to rerun pipeline');
     }
   }, [rerunPipeline]);
+
+  // Function to handle clicking on a pipeline
+  const handlePipelineClick = useCallback((pipeline) => {
+    console.log("Pipeline clicked:", pipeline);
+    
+    // Always fetch the full pipeline details to ensure we have complete data
+    const getPipelineDetails = async () => {
+      try {
+        setPageLoading(true);
+        
+        // Get detailed pipeline information using imported service
+        const detailedPipeline = await pipelineService.getPipeline(pipeline.pipeline_id);
+        console.log("Fetched detailed pipeline:", detailedPipeline);
+        
+        // Set the selected pipeline with complete details
+        setSelectedPipeline(detailedPipeline);
+      } catch (error) {
+        console.error("Failed to get pipeline details:", error);
+        // If we can't get details, show what we have
+        setSelectedPipeline(pipeline);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    
+    getPipelineDetails();
+  }, []);
 
   // Handle loading state
   if (pageLoading) {
@@ -476,12 +733,14 @@ export const PipelinePage = () => {
               pipelines.map((pipeline) => (
                 <div
                   key={pipeline.pipeline_id}
-                  className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                  className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  onClick={() => handlePipelineClick(pipeline)}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-medium">
+                      <h3 className="text-lg font-medium flex items-center">
                         Pipeline #{pipeline.pipeline_id}
+                        <ChevronRight className="w-5 h-5 ml-2 text-gray-400" />
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Dataset: {datasetOptions.find ? 
@@ -531,82 +790,6 @@ export const PipelinePage = () => {
                       </div>
                     </div>
 
-                    {pipeline.results && (
-                      <div className="mt-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {pipeline.results.correlation_matrix && (
-                            <Card>
-                              <CardHeader>
-                                <h4 className="text-sm font-medium">Correlation Analysis</h4>
-                              </CardHeader>
-                              <CardContent>
-                              <MetricsVisualization
-                                  type="heatmap"
-                                  data={utils.transformCorrelationMatrix(pipeline.results.correlation_matrix)}
-                                  title="Feature Correlations"
-                                  height={250}
-                                />
-                              </CardContent>
-                            </Card>
-                          )}
-
-                          {pipeline.results.feature_importance && (
-                            <Card>
-                              <CardHeader>
-                                <h4 className="text-sm font-medium">Feature Importance</h4>
-                              </CardHeader>
-                              <CardContent>
-                                <MetricsVisualization
-                                  type="bar"
-                                  data={utils.transformFeatureImportance(pipeline.results.feature_importance)}
-                                  title="Feature Importance Scores"
-                                  xKey="feature"
-                                  yKey="importance"
-                                  height={250}
-                                />
-                              </CardContent>
-                            </Card>
-                          )}
-                        </div>
-
-                        {pipeline.results.data_quality_report && (
-                          <Card>
-                            <CardHeader>
-                              <h4 className="text-sm font-medium">Data Quality Report</h4>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="space-y-1">
-                                  <p className="text-sm text-gray-500">Missing Values</p>
-                                  <p className="text-lg font-medium">
-                                    {pipeline.results.data_quality_report.missing_values}%
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-gray-500">Outliers Detected</p>
-                                  <p className="text-lg font-medium">
-                                    {pipeline.results.data_quality_report.outliers_count}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-gray-500">Duplicate Rows</p>
-                                  <p className="text-lg font-medium">
-                                    {pipeline.results.data_quality_report.duplicate_rows}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-gray-500">Data Completeness</p>
-                                  <p className="text-lg font-medium">
-                                    {pipeline.results.data_quality_report.completeness}%
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
-                    )}
-
                     {pipeline.error_message && (
                       <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                         <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
@@ -621,7 +804,10 @@ export const PipelinePage = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => window.location.href = pipeline.results!.download_url!}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent opening modal
+                            window.location.href = pipeline.results.download_url;
+                          }}
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download Results
@@ -630,7 +816,10 @@ export const PipelinePage = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleRerunPipeline(pipeline.pipeline_id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent opening modal
+                          handleRerunPipeline(pipeline.pipeline_id);
+                        }}
                         disabled={loading}
                       >
                         <RefreshCcw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -644,6 +833,15 @@ export const PipelinePage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pipeline Details Modal */}
+      {selectedPipeline && (
+        <PipelineDetails
+          pipeline={selectedPipeline}
+          datasetName={datasetOptions.find(d => d.value === selectedPipeline.dataset_id.toString())?.label}
+          onClose={() => setSelectedPipeline(null)}
+        />
+      )}
     </div>
   );
 };

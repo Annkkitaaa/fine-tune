@@ -44,8 +44,15 @@ export interface PipelineResults {
     duplicate_rows: number;
     completeness: number;
   };
+  preprocessing_summary?: {
+    missing_values_handled: number;
+    outliers_removed: number;
+    features_scaled: number;
+    features_engineered: number;
+  };
   download_url?: string;
   processed_rows?: number;
+  // Add any other fields that might be in the response
 }
 
 export interface PipelineFormState {
