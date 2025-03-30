@@ -3,7 +3,8 @@ import { apiClient } from '@/lib/api-client';
 import { 
   Deployment, 
   DeploymentCreateRequest,
-  DeploymentStatus 
+  DeploymentStatus,
+  SpheronDeploymentRequest 
 } from '@/types/deployment.types';
 
 export const deploymentService = {
@@ -12,6 +13,13 @@ export const deploymentService = {
 
   createDeployment: (data: DeploymentCreateRequest) =>
     apiClient.request<Deployment>('/deployment/create', {
+      method: 'POST',
+      data,
+    }),
+    
+  // Add Spheron specific deployment method
+  createSpheronDeployment: (data: SpheronDeploymentRequest) =>
+    apiClient.request<Deployment>('/deployment/spheron', {
       method: 'POST',
       data,
     }),
