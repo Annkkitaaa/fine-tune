@@ -1,7 +1,7 @@
-# app/schemas/deployment.py
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
+from app.schemas.spheron import SpheronDeploymentConfig
 
 class DeploymentBase(BaseModel):
     name: str
@@ -9,9 +9,16 @@ class DeploymentBase(BaseModel):
     model_id: int
     config: Optional[Dict[str, Any]] = None
     endpoint_url: Optional[str] = None
+    provider: Optional[str] = "local"  # Add provider field
 
 class DeploymentCreate(DeploymentBase):
     pass
+
+class SpheronDeploymentCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    model_id: int
+    config: SpheronDeploymentConfig
 
 class DeploymentUpdate(BaseModel):
     name: Optional[str] = None
@@ -24,6 +31,8 @@ class Deployment(DeploymentBase):
     id: int
     owner_id: int
     status: str
+    provider: str = "local"  # Default to local if not specified
+    provider_deployment_id: Optional[str] = None  # Add provider deployment ID
     created_at: datetime
     updated_at: Optional[datetime] = None
     start_time: Optional[datetime] = None

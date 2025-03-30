@@ -18,6 +18,8 @@ class Deployment(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(String(1000))
+    provider = Column(String(50), nullable=False, default="local")
+    provider_deployment_id = Column(String(255), nullable=True)
     
     # Foreign Keys
     model_id = Column(Integer, ForeignKey("models.id", ondelete="CASCADE"), nullable=False)
