@@ -312,6 +312,9 @@ async def preprocess_dataset(
         )
     
     try:
+        process_id = str(uuid.uuid4())
+        temp_dir = os.path.join(settings.TEMP_FOLDER, process_id)
+        os.makedirs(temp_dir, exist_ok=True)
         # Extract preprocessing parameters
         preprocessing_config = preprocessing_request.get("preprocessing_config", {})
         selected_columns = preprocessing_request.get("selected_columns", [])

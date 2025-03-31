@@ -24,6 +24,8 @@ const initialFormState: DatasetFormState = {
   enableFeatureEngineering: false
 };
 
+
+
 const formats: SelectOption[] = [
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
@@ -43,6 +45,8 @@ const outlierMethods: SelectOption[] = [
   { value: 'iqr', label: 'IQR Method' },
   { value: 'percentile', label: 'Percentile Method' },
 ];
+
+
 
 export const DatasetsPage: React.FC = () => {
   const {
@@ -149,8 +153,8 @@ export const DatasetsPage: React.FC = () => {
       setUploadProgress(0);
     }
   };
-
-  // Add this function to your DatasetsPage component
+  
+  // Export dataset function
   const handleExportDataset = () => {
     try {
       // Check if we have data to export
@@ -228,22 +232,36 @@ export const DatasetsPage: React.FC = () => {
     setUploadProgress(0);
   };
 
-  // View dataset sample
-  const handleViewDataset = async (datasetId: number) => {
+  // View dataset sample with filters
+  const handleViewDataset = async (datasetId: number, filters?: any) => {
     try {
       setIsProcessing(true);
       setActiveTab('view');
       setSelectedDatasetId(datasetId);
       
-      const result = await viewDatasetSample(datasetId);
+      console.log("Fetching dataset with filters:", filters);
+      
+      const result = await viewDatasetSample(datasetId, filters);
       
       if (result) {
         setDatasetSample(result.data);
         setDatasetColumns(result.columns);
-        setSelectedColumns(result.columns);
+        
+        // Only update selected columns if not already set or if explicitly resetting
+        if (!selectedColumns.length || (filters && filters.resetColumns)) {
+          setSelectedColumns(result.columns);
+        }
+        
+        // If filtering returned no results, show a message
+        if (result.data.length === 0 && filters) {
+          setError("No data matches your filter criteria");
+        } else {
+          setError(null);
+        }
       }
     } catch (error) {
       console.error('Error viewing dataset:', error);
+      setError('Failed to load dataset with filters');
     } finally {
       setIsProcessing(false);
     }
@@ -261,11 +279,15 @@ export const DatasetsPage: React.FC = () => {
   };
 
   // Apply preprocessing to dataset
+  
   const handlePreprocessDataset = async () => {
     if (!selectedDatasetId) return;
     
     try {
       setIsProcessing(true);
+      // Use a separate error state for preprocessing
+      const [preprocessError, setPreprocessError] = useState<string | null>(null);
+      setPreprocessError(null); // Clear any previous errors
       
       // Create preprocessing config from form
       const preprocessingConfig: PreprocessingConfig = {
@@ -278,6 +300,8 @@ export const DatasetsPage: React.FC = () => {
         feature_engineering: datasetForm.enableFeatureEngineering
       };
       
+      console.log("Sending preprocessing request with config:", preprocessingConfig);
+      
       const result = await preprocessDataset(
         selectedDatasetId,
         preprocessingConfig,
@@ -286,12 +310,25 @@ export const DatasetsPage: React.FC = () => {
       );
       
       if (result) {
+        console.log("Preprocessing successful, result:", result);
         setPreprocessingResult(result);
         // Show the processed sample
         setDatasetSample(result.sample_data);
       }
-    } catch (error) {
-      console.error('Error preprocessing dataset:', error);
+    } catch (err) {
+      console.error('Error preprocessing dataset:', err);
+      // Use a direct approach to show errors without state
+      const errorMessage = err instanceof Error ? err.message : 
+        typeof err === 'string' ? err : 'Failed to preprocess dataset';
+      
+      // Use window.alert for immediate feedback if needed
+      window.alert(`Preprocessing failed: ${errorMessage}`);
+      
+      // Or add an error element to the DOM (not ideal but works in emergencies)
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'text-red-500 mt-2';
+      errorDiv.textContent = errorMessage;
+      document.querySelector('.preprocessing-form')?.appendChild(errorDiv);
     } finally {
       setIsProcessing(false);
     }
@@ -328,6 +365,80 @@ export const DatasetsPage: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Generate distribution data for visualization
+  const generateDistributionData = () => {
+    // If we don't have dataset or no numerical columns, return default data
+    if (!datasetSample || datasetSample.length === 0) {
+      return [
+        { name: 'Min', value: 0 },
+        { name: 'Q1', value: 25 },
+        { name: 'Median', value: 50 },
+        { name: 'Q3', value: 75 },
+        { name: 'Max', value: 100 },
+      ];
+    }
+    
+    // Get first numeric column for demonstration
+    const numericColumns = selectedColumns.filter(col => {
+      const sampleValue = datasetSample[0][col];
+      return typeof sampleValue === 'number';
+    });
+    
+    if (numericColumns.length === 0) return [];
+    
+    const column = numericColumns[0];
+    
+    // Extract values
+    const values = datasetSample
+      .map(row => row[column])
+      .filter(val => typeof val === 'number' && !isNaN(val));
+      
+    if (values.length === 0) return [];
+    
+    // Sort values for percentile calculations
+    values.sort((a, b) => a - b);
+    
+    // Calculate statistics
+    const min = values[0];
+    const max = values[values.length - 1];
+    const median = values[Math.floor(values.length / 2)];
+    const q1 = values[Math.floor(values.length / 4)];
+    const q3 = values[Math.floor(3 * values.length / 4)];
+    
+    return [
+      { name: 'Min', value: min },
+      { name: 'Q1', value: q1 },
+      { name: 'Median', value: median },
+      { name: 'Q3', value: q3 },
+      { name: 'Max', value: max },
+    ];
+  };
+
+  // Generate missing values data for visualization
+  const generateMissingValuesData = () => {
+    if (!datasetSample || datasetSample.length === 0) return [];
+    
+    let totalCells = datasetSample.length * selectedColumns.length;
+    let missingCells = 0;
+    
+    // Count missing values
+    datasetSample.forEach(row => {
+      selectedColumns.forEach(col => {
+        if (row[col] === null || row[col] === undefined || row[col] === '') {
+          missingCells++;
+        }
+      });
+    });
+    
+    const completePercentage = Math.round(100 * (totalCells - missingCells) / totalCells);
+    const missingPercentage = Math.round(100 * missingCells / totalCells);
+    
+    return [
+      { name: 'Complete', value: completePercentage },
+      { name: 'Missing', value: missingPercentage },
+    ];
   };
 
   // Filter datasets based on search query
@@ -614,7 +725,7 @@ export const DatasetsPage: React.FC = () => {
               </p>
             </div>
             <div className="flex space-x-2">
-            <Button
+              <Button
                 variant="secondary"
                 size="sm"
                 onClick={handleExportDataset}
@@ -663,8 +774,14 @@ export const DatasetsPage: React.FC = () => {
                         onChange={(e) => setFilterCondition(e.target.value)}
                       />
                       <Button 
-                        className="mt-2 w-full"
-                        onClick={() => handleViewDataset(selectedDatasetId)}
+                        className="w-full mt-2"
+                        onClick={() => {
+                          // Make sure to pass the current dataset ID and filter conditions
+                          handleViewDataset(selectedDatasetId, {
+                            columns: selectedColumns.join(','),
+                            filter_condition: filterCondition
+                          });
+                        }}
                       >
                         <Filter className="w-4 h-4 mr-2" />
                         Apply Filters
@@ -674,7 +791,7 @@ export const DatasetsPage: React.FC = () => {
                 </div>
 
                 {/* Dataset table */}
-                {datasetSample ? (
+                {datasetSample && datasetSample.length > 0 ? (
                   <div className="overflow-x-auto border rounded-md">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
@@ -712,27 +829,21 @@ export const DatasetsPage: React.FC = () => {
                 ) : (
                   <div className="text-center py-12 text-gray-500">
                     <Database className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                    <p>No data to display. Select a dataset to view.</p>
+                    <p>No data to display. Select a dataset to view or adjust your filters.</p>
                   </div>
                 )}
                 
                 {/* Data statistics visualization */}
-                {datasetSample && selectedDataset?.meta_info?.statistics && (
+                {datasetSample && datasetSample.length > 0 && (
                   <div className="mt-8">
                     <h3 className="text-lg font-medium mb-3">Dataset Statistics</h3>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Sample visualization */}
+                      {/* Numeric distribution visualization */}
                       <div className="border rounded-md p-4">
                         <h4 className="text-md font-medium mb-2">Numeric Distribution</h4>
                         <MetricsVisualization
                           type="line"
-                          data={[
-                            { name: 'Min', value: 0 },
-                            { name: 'Q1', value: 25 },
-                            { name: 'Median', value: 50 },
-                            { name: 'Q3', value: 75 },
-                            { name: 'Max', value: 100 },
-                          ]}
+                          data={generateDistributionData()}
                           title="Value Distribution"
                           xKey="name"
                           yKey="value"
@@ -744,15 +855,13 @@ export const DatasetsPage: React.FC = () => {
                       <div className="border rounded-md p-4">
                         <h4 className="text-md font-medium mb-2">Missing Values</h4>
                         <MetricsVisualization
-                          type="line"
-                          data={[
-                            { name: 'Complete', value: 95 },
-                            { name: 'Missing', value: 5 },
-                          ]}
+                          type="bar"
+                          data={generateMissingValuesData()}
                           title="Data Completeness"
                           xKey="name"
                           yKey="value"
                           height={200}
+                          color="#4f46e5"
                         />
                       </div>
                     </div>
@@ -775,7 +884,6 @@ export const DatasetsPage: React.FC = () => {
               <div className="md:col-span-2">
                 <h3 className="text-lg font-medium mb-3">Data Cleaning</h3>
               </div>
-
               
               <div className="flex items-center">
                 <input
@@ -853,29 +961,29 @@ export const DatasetsPage: React.FC = () => {
               </div>
               
               <div className="mt-6 flex justify-end space-x-4">
-              <Button 
-                variant="secondary" 
-                onClick={() => setActiveTab('view')}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handlePreprocessDataset}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Preprocess Dataset
-                  </>
-                )}
-              </Button>
-            </div>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setActiveTab('view')}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePreprocessDataset}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Preprocess Dataset
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
           
@@ -976,7 +1084,6 @@ export const DatasetsPage: React.FC = () => {
         </Card>
       )}
       
-
       {/* Dataset List Card */}
       {activeTab === 'upload' && (
         <Card>

@@ -4,11 +4,19 @@ from pydantic import AnyHttpUrl, PostgresDsn, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 from typing_extensions import TypedDict
+from pathlib import Path
 
 class TimezoneConfig(TypedDict):
     default_timezone: str
     store_timezone: bool
     convert_timezone: bool
+
+# Define base directory outside the class
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_TEMP_FOLDER = os.path.join(_BASE_DIR, "temp")
+
+# Create the temp folder if it doesn't exist
+os.makedirs(_TEMP_FOLDER, exist_ok=True)
 
 class Settings(BaseSettings):
     # Basic Configuration
@@ -40,6 +48,10 @@ class Settings(BaseSettings):
     MODEL_STORAGE_PATH: str = os.path.join(os.getcwd(), "models")
     MAX_CONTENT_LENGTH: int = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS: List[str] = [".csv", ".json", ".parquet", ".xlsx"]
+
+    # Add the directories with proper type annotations
+    BASE_DIR: ClassVar[Path] = _BASE_DIR
+    TEMP_FOLDER: str = _TEMP_FOLDER
 
     # Pipeline Configuration
     PIPELINE_CONFIG: ClassVar[Dict[str, Dict[str, Any]]] = {

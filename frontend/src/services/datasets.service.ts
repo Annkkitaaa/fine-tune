@@ -67,8 +67,34 @@ export const datasetsService = {
     preprocessingConfig: PreprocessingConfig,
     selectedColumns?: string[],
     filterCondition?: string
-  ) =>
-    apiClient.request<{
+  ) => {
+    // Log the preprocessing request for debugging
+    console.log("Preprocessing request:", {
+      id,
+      preprocessingConfig,
+      selectedColumns,
+      filterCondition
+    });
+    
+    // Ensure preprocessing_config object is properly formatted
+    const requestData = {
+      preprocessing_config: {
+        ...preprocessingConfig,
+        // Ensure these keys match what the backend expects
+        handle_missing: preprocessingConfig.handle_missing,
+        missing_strategy: preprocessingConfig.missing_strategy,
+        handle_outliers: preprocessingConfig.handle_outliers,
+        outlier_method: preprocessingConfig.outlier_method,
+        outlier_threshold: preprocessingConfig.outlier_threshold,
+        scaling: preprocessingConfig.scaling,
+        feature_engineering: preprocessingConfig.feature_engineering
+      },
+      selected_columns: selectedColumns || [],
+      filter_condition: filterCondition || ""
+    };
+    
+    // Make the API request with improved error handling
+    return apiClient.request<{
       processed_id: string;
       sample_data: any[];
       original_rows: number;
@@ -82,12 +108,16 @@ export const datasetsService = {
       column_stats: Record<string, any>;
     }>(`/data/${id}/preprocess`, {
       method: 'POST',
-      data: {
-        preprocessing_config: preprocessingConfig,
-        selected_columns: selectedColumns,
-        filter_condition: filterCondition,
-      },
-    }),
+      data: requestData,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).catch(error => {
+      console.error("Preprocessing request failed:", error);
+      // Re-throw the error to be handled by the component
+      throw error;
+    });
+  },
     
   saveProcessedDataset: (
     id: number,
