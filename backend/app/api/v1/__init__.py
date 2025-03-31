@@ -19,5 +19,5 @@ api_router.include_router(deployment_router, prefix="/deployment", tags=["deploy
 api_router.include_router(evaluation_router, prefix="/evaluation", tags=["evaluation"])
 api_router.include_router(models_router, prefix="/models", tags=["models"])
 api_router.include_router(pipeline_router, prefix="/pipeline", tags=["pipeline"])
-api_router.include_router(training_router, prefix="/training", tags=["training"])
+api_router.include_router(training_router, prefix="/trainings", tags=["trainings"])
 #api_router.include_router(user_router, prefix="/users", tags=["users"])

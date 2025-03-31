@@ -31,7 +31,7 @@ export const TrainingPage: React.FC = () => {
     trainingForm,
     loading,
     error,
-    startTraining,
+    createTraining, 
     directStartTraining,
     stopTraining,
     updateTrainingForm,
@@ -89,7 +89,7 @@ export const TrainingPage: React.FC = () => {
         hyperparameters: trainingForm.hyperparameters
       });
 
-      await startTraining();
+      await createTraining();
       console.log("Training started successfully");
       
       // Reset form and close panel

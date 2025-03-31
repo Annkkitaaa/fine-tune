@@ -3,22 +3,18 @@ import { TrainingFormState } from '@/types/training.types';
 import { SelectOption } from '@/types';
 
 // Batch size options
-export const BATCH_SIZE_OPTIONS: SelectOption[] = [
+export const OPTIMIZER_OPTIONS = [
+  { value: 'adam', label: 'Adam' },
+  { value: 'sgd', label: 'SGD' },
+  { value: 'rmsprop', label: 'RMSprop' }
+];
+
+export const BATCH_SIZE_OPTIONS = [
   { value: '8', label: '8' },
   { value: '16', label: '16' },
   { value: '32', label: '32' },
   { value: '64', label: '64' },
-  { value: '128', label: '128' },
-  { value: '256', label: '256' }
-];
-
-// Optimizer options
-export const OPTIMIZER_OPTIONS: SelectOption[] = [
-  { value: 'Adam', label: 'Adam' },
-  { value: 'SGD', label: 'SGD' },
-  { value: 'RMSprop', label: 'RMSprop' },
-  { value: 'Adagrad', label: 'Adagrad' },
-  { value: 'Adadelta', label: 'Adadelta' }
+  { value: '128', label: '128' }
 ];
 
 // Learning rate options
