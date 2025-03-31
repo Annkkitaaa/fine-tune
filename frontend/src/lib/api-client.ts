@@ -88,41 +88,55 @@ class ApiClient {
       if (axiosError.response?.data) {
         // Handle validation errors array
         if (Array.isArray(axiosError.response.data)) {
-          return new Error(
-            axiosError.response.data
-              .map((err) => err.msg)
-              .filter(Boolean)
-              .join(', ')
-          );
+          const errorMessage = axiosError.response.data
+            .map((err) => err.msg ?? String(err))
+            .filter(Boolean)
+            .join(', ');
+          return new Error(errorMessage || 'Multiple validation errors occurred');
         }
 
         // Handle error with detail field
         if (axiosError.response.data.detail) {
           return new Error(String(axiosError.response.data.detail));
         }
+        
+        // Handle error message field
+        if (axiosError.response.data.message) {
+          return new Error(String(axiosError.response.data.message));
+        }
+        
+        // Try to stringify the error data as fallback
+        try {
+          return new Error(JSON.stringify(axiosError.response.data));
+        } catch (e) {
+          // If all else fails, return generic error with status
+          return new Error(`Request failed with status ${axiosError.response?.status || 'unknown'}`);
+        }
       }
 
-      // Handle specific status codes
+      // Handle specific status codes with more helpful messages
       switch (axiosError.response?.status) {
         case 400:
-          return new Error('Invalid request data');
+          return new Error('Invalid request data. Please check your inputs.');
         case 401:
           localStorage.removeItem(TOKEN_KEY);
-          return new Error('Please log in again');
+          return new Error('Your session has expired. Please log in again.');
         case 403:
-          return new Error('You do not have permission');
+          return new Error('You do not have permission to perform this action.');
         case 404:
           return new Error(`Resource not found: ${axiosError.config?.url}`);
         case 422:
-          return new Error('Invalid input data');
+          return new Error('The provided data is invalid or incomplete.');
         case 500:
-          return new Error('Server error occurred');
+          return new Error('A server error occurred. Please try again or contact support.');
         default:
-          return new Error(axiosError.message || 'An error occurred');
+          return new Error(axiosError.message || 'An error occurred while processing your request.');
       }
     }
 
-    return new Error('An unexpected error occurred');
+    // For non-Axios errors, provide a generic error message
+    console.error("Non-Axios Error:", error);
+    return new Error('An unexpected error occurred. Please try again.');
   }
 
   // Utility function to retry API calls
