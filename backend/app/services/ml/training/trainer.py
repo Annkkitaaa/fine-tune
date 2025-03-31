@@ -144,8 +144,13 @@ async def start_training_job(training_id: int, db: Session) -> None:
             X_val, y_val = None, None
 
         # Ensure the function matches TensorFlowTrainer method
-        train_loader, val_loader = trainer.prepare_data(X_train, y_train, X_val, y_val)
-
+        if model.framework == "pytorch":
+            train_loader, val_loader = trainer.prepare_training(X_train, y_train, X_val, y_val)
+        elif model.framework == "tensorflow":
+            train_loader, val_loader = trainer.prepare_data(X_train, y_train, X_val, y_val)
+        elif model.framework == "sklearn":
+            train_loader, val_loader = (X_train, y_train), (X_val, y_val) if X_val is not None and y_val is not None else (None, None)
+            
         logger.info("Starting model training...")
         trained_model, history = await trainer.train(train_loader, val_loader)
 

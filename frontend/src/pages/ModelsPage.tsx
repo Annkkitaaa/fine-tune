@@ -8,7 +8,11 @@ import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Loader2, Plus, Search, Filter, AlertCircle } from 'lucide-react';
 import { useModels } from '@/hooks/useModels';
 import { ModelFormState } from '@/types/model.types';
-import { FRAMEWORKS, ARCHITECTURES, ACTIVATION_FUNCTIONS } from '@/constants/model.constants';
+import { 
+  FRAMEWORKS, 
+  ARCHITECTURES, 
+  ACTIVATION_FUNCTIONS 
+} from '@/lib/constants/model'; // Fixed import path
 
 export const ModelsPage: React.FC = () => {
   const {
@@ -28,7 +32,7 @@ export const ModelsPage: React.FC = () => {
     name: '',
     description: '',
     framework: 'pytorch',
-    architecture: 'resnet50',
+    architecture: 'mlp', // Updated to use implemented architecture
     version: '1.0.0',
     config: {
       hidden_layers: [64, 32],
@@ -64,7 +68,7 @@ export const ModelsPage: React.FC = () => {
       name: '',
       description: '',
       framework: 'pytorch',
-      architecture: 'resnet50',
+      architecture: 'mlp',
       version: '1.0.0',
       config: {
         hidden_layers: [64, 32],
@@ -213,7 +217,7 @@ export const ModelsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              </div>
+            </div>
             <Button variant="secondary">
               <Filter className="w-4 h-4 mr-2" />
               Filter

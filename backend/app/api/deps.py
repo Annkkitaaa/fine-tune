@@ -1,105 +1,91 @@
 # app/api/deps.py
-from typing import Generator
+from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
 
-from app.core.config import settings
-from app.core.dev_config import BYPASS_AUTH, MOCK_USER
 from app.db.session import SessionLocal
+from app.core.config import settings
 from app.models.user import User
-from app.services.auth.jwt import decode_access_token
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Create a standard OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login", 
-    auto_error=not BYPASS_AUTH  # Don't auto-error if auth is bypassed
+    tokenUrl=f"{settings.API_V1_STR}/auth/login",
+    auto_error=False  # Don't auto-raise errors for missing tokens
 )
 
-def get_db() -> Generator[Session, None, None]:
-    """Get database session"""
+def get_db() -> Generator:
+    """
+    Get database session
+    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-def get_mock_dev_user(db: Session) -> User:
-    """
-    Get or create mock development user when auth is bypassed
-    """
-    # Check if mock user exists in DB
-    user = db.query(User).filter(User.email == MOCK_USER["email"]).first()
-    
-    # If not, create one
-    if user is None:
-        logger.info("Creating mock development user")
-        user = User(
-            email=MOCK_USER["email"],
-            full_name=MOCK_USER["full_name"],
-            is_active=MOCK_USER["is_active"],
-            is_superuser=MOCK_USER["is_superuser"],
-            hashed_password="$2b$12$mock_hashed_password_for_development"
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    
-    return user
-
 async def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
-    """Get current authenticated user"""
-    # Development mode with auth bypass
-    if BYPASS_AUTH:
-        logger.info("Development mode: Authentication bypassed, using mock user")
-        return get_mock_dev_user(db)
-    
-    # Normal authentication flow
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    """
+    Get the current user
+    """
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
-        # Decode token and get user_id from sub field
-        payload = decode_access_token(token)
-        user_id = payload.sub
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id: int = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
-            
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     except JWTError:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Get user from database
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if user is None:
-        raise credentials_exception
-        
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
-async def get_current_active_user(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """Get current active user"""
-    if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-async def get_current_active_superuser(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """Get current active superuser"""
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
+# This is the key addition - a function that provides an optional user
+async def get_optional_user(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)  # We're using the same scheme but handling None case
+) -> Optional[User]:
+    """
+    Get the current user if authenticated, otherwise return None.
+    For development purposes during authentication bypass.
+    """
+    if not token:
+        return None
+    
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-    return current_user
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            return None
+            
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except JWTError:
+        return None

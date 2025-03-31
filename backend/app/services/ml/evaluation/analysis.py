@@ -32,7 +32,7 @@ class DataAnalysisService:
         self,
         data: Union[pd.DataFrame, np.ndarray],
         feature_names: Optional[List[str]] = None,
-        target_column: Optional[str] = None  # Made optional
+        target_column: Optional[str] = None
     ) -> Dict:
         """Analyze dataset and create visualizations"""
         try:
@@ -45,10 +45,14 @@ class DataAnalysisService:
             # Feature correlations
             correlations = await self._analyze_correlations(df)
             
+            # Feature distributions - ensure this method is called
+            distributions = await self._analyze_distributions(df)
+            
             # Store results
             self._analysis_results = {
                 'basic_statistics': stats,
-                'correlations': correlations
+                'correlations': correlations,
+                'distributions': distributions
             }
             
             return self._analysis_results

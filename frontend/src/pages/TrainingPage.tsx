@@ -58,10 +58,10 @@ export const TrainingPage: React.FC = () => {
   // Log the values of the form whenever they change
   useEffect(() => {
     console.log("Form state changed:", {
-      modelId: trainingForm.modelId,
-      datasetId: trainingForm.datasetId,
-      isModelSelected: Boolean(trainingForm.modelId),
-      isDatasetSelected: Boolean(trainingForm.datasetId)
+      modelId: trainingForm?.modelId,
+      datasetId: trainingForm?.datasetId,
+      isModelSelected: Boolean(trainingForm?.modelId),
+      isDatasetSelected: Boolean(trainingForm?.datasetId)
     });
   }, [trainingForm]);
 
@@ -70,12 +70,12 @@ export const TrainingPage: React.FC = () => {
     setLocalError(null);
     
     // Validate form
-    if (!trainingForm.modelId) {
+    if (!trainingForm?.modelId) {
       setLocalError("Please select a model");
       return;
     }
     
-    if (!trainingForm.datasetId) {
+    if (!trainingForm?.datasetId) {
       setLocalError("Please select a dataset");
       return;
     }
@@ -158,8 +158,8 @@ export const TrainingPage: React.FC = () => {
     
     const searchTerm = searchQuery.toLowerCase();
     return trainings.filter(training => {
-      const modelName = modelOptions.find(m => m.value === training.model_id.toString())?.label || '';
-      const datasetName = datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || '';
+      const modelName = modelOptions.find(m => m.value === String(training.model_id))?.label || '';
+      const datasetName = datasetOptions.find(d => d.value === String(training.dataset_id))?.label || '';
       
       return modelName.toLowerCase().includes(searchTerm) ||
              datasetName.toLowerCase().includes(searchTerm);
@@ -167,7 +167,7 @@ export const TrainingPage: React.FC = () => {
   }, [trainings, searchQuery, modelOptions, datasetOptions]);
 
   // Determine if the form is ready for submission
-  const isFormValid = Boolean(trainingForm.modelId) && Boolean(trainingForm.datasetId);
+  const isFormValid = Boolean(trainingForm?.modelId) && Boolean(trainingForm?.datasetId);
   const isSubmitDisabled = loading || localLoading || !isFormValid;
 
   // Show loading state
@@ -218,7 +218,7 @@ export const TrainingPage: React.FC = () => {
         </Alert>
       )}
 
-      {showNewJob && (
+      {showNewJob && trainingForm && (
         <Card>
           <CardHeader>
             <h2 className="text-xl font-semibold">Create Training Job</h2>
@@ -229,7 +229,7 @@ export const TrainingPage: React.FC = () => {
                 <Select
                   label="Model"
                   options={modelOptions}
-                  value={trainingForm.modelId}
+                  value={trainingForm.modelId || ''}
                   onChange={(value) => {
                     console.log("Model selected:", value);
                     updateTrainingForm({ modelId: value });
@@ -238,7 +238,7 @@ export const TrainingPage: React.FC = () => {
                 <Select
                   label="Dataset"
                   options={datasetOptions}
-                  value={trainingForm.datasetId}
+                  value={trainingForm.datasetId || ''}
                   onChange={(value) => {
                     console.log("Dataset selected:", value);
                     updateTrainingForm({ datasetId: value });
@@ -250,7 +250,7 @@ export const TrainingPage: React.FC = () => {
                   min="0.0001"
                   max="1"
                   step="0.0001"
-                  value={trainingForm.hyperparameters.learning_rate}
+                  value={trainingForm.hyperparameters?.learning_rate || 0.001}
                   onChange={(e) => updateTrainingForm({
                     hyperparameters: {
                       ...trainingForm.hyperparameters,
@@ -263,7 +263,7 @@ export const TrainingPage: React.FC = () => {
                 <Select
                   label="Batch Size"
                   options={BATCH_SIZE_OPTIONS}
-                  value={trainingForm.hyperparameters.batch_size.toString()}
+                  value={String(trainingForm.hyperparameters?.batch_size || 32)}
                   onChange={(value) => updateTrainingForm({
                     hyperparameters: {
                       ...trainingForm.hyperparameters,
@@ -276,7 +276,7 @@ export const TrainingPage: React.FC = () => {
                   type="number"
                   min="1"
                   max="1000"
-                  value={trainingForm.hyperparameters.epochs}
+                  value={trainingForm.hyperparameters?.epochs || 10}
                   onChange={(e) => updateTrainingForm({
                     hyperparameters: {
                       ...trainingForm.hyperparameters,
@@ -287,12 +287,12 @@ export const TrainingPage: React.FC = () => {
                 <Select
                   label="Optimizer"
                   options={OPTIMIZER_OPTIONS}
-                  value={trainingForm.hyperparameters.optimizer.name}
+                  value={trainingForm.hyperparameters?.optimizer?.name || 'adam'}
                   onChange={(value) => updateTrainingForm({
                     hyperparameters: {
                       ...trainingForm.hyperparameters,
                       optimizer: {
-                        ...trainingForm.hyperparameters.optimizer,
+                        ...(trainingForm.hyperparameters?.optimizer || {}),
                         name: value
                       }
                     }
@@ -369,7 +369,7 @@ export const TrainingPage: React.FC = () => {
                 <MetricsVisualization
                   type="line"
                   data={trainings.map(t => ({
-                    name: modelOptions.find(m => m.value === t.model_id.toString())?.label || `Model ${t.model_id}`,
+                    name: modelOptions.find(m => m.value === String(t.model_id))?.label || `Model ${t.model_id}`,
                     progress: utils.calculateProgress(t)
                   }))}
                   title="Training Progress"
@@ -390,7 +390,7 @@ export const TrainingPage: React.FC = () => {
                 <MetricsVisualization
                   type="line"
                   data={trainings.filter(t => t.metrics).map(t => ({
-                    name: modelOptions.find(m => m.value === t.model_id.toString())?.label || `Model ${t.model_id}`,
+                    name: modelOptions.find(m => m.value === String(t.model_id))?.label || `Model ${t.model_id}`,
                     loss: t.metrics?.loss || 0,
                     accuracy: t.metrics?.accuracy || 0
                   }))}
@@ -441,10 +441,10 @@ export const TrainingPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-medium">
-                        {modelOptions.find(m => m.value === training.model_id.toString())?.label || `Model ${training.model_id}`}
+                        {modelOptions.find(m => m.value === String(training.model_id))?.label || `Model ${training.model_id}`}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Dataset: {datasetOptions.find(d => d.value === training.dataset_id.toString())?.label || `Dataset ${training.dataset_id}`}
+                        Dataset: {datasetOptions.find(d => d.value === String(training.dataset_id))?.label || `Dataset ${training.dataset_id}`}
                       </p>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -469,7 +469,7 @@ export const TrainingPage: React.FC = () => {
                   </div>
 
                   {/* Progress Bar */}
-                  {(training.status === 'running' || training.status === 'queued') && (
+                  {(training.status === 'running' || training.status === 'pending') && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>

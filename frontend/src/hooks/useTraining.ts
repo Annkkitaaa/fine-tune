@@ -1,239 +1,243 @@
 // src/hooks/useTraining.ts
 import { useState, useCallback, useEffect } from 'react';
-import { 
+import {
   Training,
-  TrainingFormState,
   TrainingCreateRequest,
   DEFAULT_TRAINING_FORM
-} from '@/types/training.types';
-import { trainingService } from '@/lib/services/training';
+} from "@/types/training.types";
+import { trainingService } from "@/services/training.service";
 
-// Key to store training IDs in localStorage
-const TRAINING_IDS_KEY = 'ml_platform_training_ids';
+const TRAINING_IDS_KEY = "ml_platform_training_ids";
+
+// Define training form type
+interface TrainingForm {
+  modelId: string;
+  datasetId: string;
+  hyperparameters: {
+    learning_rate: number;
+    batch_size: number;
+    epochs: number;
+    optimizer: {
+      name: string;
+    };
+  };
+}
 
 export function useTraining() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [trainingForm, setTrainingForm] = useState<TrainingFormState>(DEFAULT_TRAINING_FORM);
-
-  // Function to get all training IDs from localStorage
-  const getTrainingIds = useCallback((): number[] => {
-    try {
-      const idsStr = localStorage.getItem(TRAINING_IDS_KEY);
-      if (!idsStr) return [];
-      
-      const parsedIds = JSON.parse(idsStr);
-      return Array.isArray(parsedIds) ? parsedIds : [];
-    } catch (err) {
-      console.error('Failed to get training IDs:', err);
-      return [];
+  const [activeTrainingIds, setActiveTrainingIds] = useState<number[]>([]);
+  
+  // Initialize training form with default values
+  const [trainingForm, setTrainingForm] = useState<TrainingForm>({
+    modelId: '',
+    datasetId: '',
+    hyperparameters: {
+      learning_rate: 0.001,
+      batch_size: 32,
+      epochs: 10,
+      optimizer: {
+        name: 'adam'
+      }
     }
+  });
+
+  // Load active training IDs from localStorage
+  useEffect(() => {
+    const savedIds = localStorage.getItem(TRAINING_IDS_KEY);
+    if (savedIds) {
+      try {
+        const ids = JSON.parse(savedIds);
+        if (Array.isArray(ids)) {
+          setActiveTrainingIds(ids);
+        }
+      } catch {
+        // Reset if corrupt
+        localStorage.removeItem(TRAINING_IDS_KEY);
+      }
+    }
+    
+    // Initial fetch of trainings
+    fetchTrainings();
   }, []);
 
-  // Function to save a new training ID to localStorage
-  const saveTrainingId = useCallback((training: Training) => {
-    try {
-      if (!training || !training.id) return;
-      
-      const existingIds = getTrainingIds();
-      if (!existingIds.includes(training.id)) {
-        const updatedIds = [...existingIds, training.id];
-        localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(updatedIds));
-        console.log("Training ID saved to localStorage:", training.id);
-      }
-    } catch (err) {
-      console.error('Failed to save training ID:', err);
-    }
-  }, [getTrainingIds]);
+  // Save active training IDs
+  const saveActiveTrainingIds = useCallback((ids: number[]) => {
+    setActiveTrainingIds(ids);
+    localStorage.setItem(TRAINING_IDS_KEY, JSON.stringify(ids));
+  }, []);
 
-  // Fetch all trainings - directly using service that handles localStorage
   const fetchTrainings = useCallback(async () => {
-    console.log("Fetching trainings...");
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await trainingService.listTrainings();
-      console.log("Trainings retrieved:", response);
-      
-      setTrainings(response || []);
-    } catch (err) {
-      console.error("Error fetching trainings:", err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch trainings');
+      const response = await trainingService.getTrainings();
+      setTrainings(response);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch trainings');
     } finally {
       setLoading(false);
     }
   }, []);
+  
+  // Function to refresh trainings data
+  const refreshTrainings = useCallback(() => {
+    return fetchTrainings();
+  }, [fetchTrainings]);
 
-  // Start a new training job with better error handling
+  // Update training form
+  const updateTrainingForm = useCallback((updates: Partial<TrainingForm>) => {
+    setTrainingForm(prev => {
+      // Handle nested updates properly
+      if (updates.hyperparameters) {
+        return {
+          ...prev,
+          ...updates,
+          hyperparameters: {
+            ...prev.hyperparameters,
+            ...updates.hyperparameters
+          }
+        };
+      }
+      return { ...prev, ...updates };
+    });
+  }, []);
+
+  // Reset training form to defaults
+  const resetTrainingForm = useCallback(() => {
+    setTrainingForm({
+      modelId: '',
+      datasetId: '',
+      hyperparameters: {
+        learning_rate: 0.001,
+        batch_size: 32,
+        epochs: 10,
+        optimizer: {
+          name: 'adam'
+        }
+      }
+    });
+  }, []);
+
+  // Start training with form data
   const startTraining = useCallback(async () => {
-    console.log("Starting training with form:", trainingForm);
     try {
       setLoading(true);
       setError(null);
       
-      // Check if form has required values
-      if (!trainingForm.modelId || !trainingForm.datasetId) {
-        throw new Error('Model and dataset are required');
-      }
-      
-      // Create request payload
-      const request: TrainingCreateRequest = {
+      // Convert form data to API request format
+      const requestData: TrainingCreateRequest = {
         model_id: parseInt(trainingForm.modelId),
         dataset_id: parseInt(trainingForm.datasetId),
         hyperparameters: trainingForm.hyperparameters
       };
-
-      console.log("Sending request to API:", request);
       
-      // Make direct request to ensure it works
-      try {
-        const response = await trainingService.startTraining(request);
-        console.log("Training started successfully:", response);
-        
-        // Save training ID and update list
-        if (response) {
-          saveTrainingId(response);
-          setTrainings(prev => [response, ...prev]);
-        }
-        
-        return response;
-      } catch (apiError) {
-        console.error("API error starting training:", apiError);
-        throw new Error(apiError instanceof Error ? apiError.message : 'API error starting training');
-      }
-    } catch (err) {
-      console.error("Error in startTraining:", err);
-      const message = err instanceof Error ? err.message : 'Failed to start training';
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [trainingForm, saveTrainingId]);
-
-  // Stop a training job
-  const stopTraining = useCallback(async (trainingId: number) => {
-    console.log(`Stopping training: ${trainingId}`);
-    try {
-      setLoading(true);
-      setError(null);
+      const response = await trainingService.createTraining(requestData);
+      setTrainings(prev => [response, ...prev]);
       
-      const response = await trainingService.stopTraining(trainingId);
-      
-      // Update the stopped training in the list
-      setTrainings(prev => prev.map(training => 
-        training.id === trainingId ? response : training
-      ));
+      // Add to active trainings
+      saveActiveTrainingIds([...activeTrainingIds, response.id]);
       
       return response;
-    } catch (err) {
-      console.error("Error in stopTraining:", err);
-      const message = err instanceof Error ? err.message : 'Failed to stop training';
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Form update handlers
-  const updateTrainingForm = useCallback((updates: Partial<TrainingFormState>) => {
-    console.log("Updating training form:", updates);
-    setTrainingForm(prev => ({
-      ...prev,
-      ...updates
-    }));
-  }, []);
-
-  const resetTrainingForm = useCallback(() => {
-    console.log("Resetting training form");
-    setTrainingForm(DEFAULT_TRAINING_FORM);
-  }, []);
-
-  // Direct API call for emergency use
-  const directStartTraining = useCallback(async () => {
-    console.log("Emergency direct training start");
-    try {
-      setLoading(true);
-      
-      // Create request payload
-      const payload = {
-        model_id: parseInt(trainingForm.modelId),
-        dataset_id: parseInt(trainingForm.datasetId),
-        hyperparameters: trainingForm.hyperparameters
-      };
-      
-      // Get auth token if used
-      const token = localStorage.getItem('access_token');
-      
-      // Make direct fetch call
-      const response = await fetch('http://localhost:8000/api/v1/training/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      console.log("Direct API response status:", response.status);
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Direct API response data:", data);
-      
-      // Update state with new training
-      if (data && data.id) {
-        saveTrainingId(data);
-        setTrainings(prev => [data, ...prev]);
-      }
-      
-      return data;
-    } catch (err) {
-      console.error("Error in directStartTraining:", err);
-      setError(err instanceof Error ? err.message : 'Direct API call failed');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create training');
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [trainingForm, saveTrainingId]);
+  }, [trainingForm, activeTrainingIds, saveActiveTrainingIds]);
 
-  // Load trainings on mount
-  useEffect(() => {
-    fetchTrainings();
-  }, [fetchTrainings]);
-  
-  // Poll for updates on active trainings
-  useEffect(() => {
-    const hasActiveTrainings = trainings.some(t => 
-      t.status === 'running' || t.status === 'queued'
-    );
-    
-    if (!hasActiveTrainings) return;
-    
-    const interval = setInterval(() => {
-      console.log("Polling for training updates");
-      fetchTrainings();
-    }, 10000); // Poll every 10 seconds
-    
-    return () => clearInterval(interval);
-  }, [trainings, fetchTrainings]);
+  // Direct start method (for emergency button)
+  const directStartTraining = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use default values for direct start
+      const requestData: TrainingCreateRequest = {
+        model_id: parseInt(trainingForm.modelId),
+        dataset_id: parseInt(trainingForm.datasetId),
+        hyperparameters: {
+          learning_rate: 0.01,
+          batch_size: 16,
+          epochs: 5,
+          optimizer: {
+            name: 'sgd'
+          }
+        }
+      };
+      
+      const response = await trainingService.createTraining(requestData);
+      setTrainings(prev => [response, ...prev]);
+      
+      // Add to active trainings
+      saveActiveTrainingIds([...activeTrainingIds, response.id]);
+      
+      return response;
+    } catch (err: any) {
+      setError(err.message || 'Failed to create training');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [trainingForm, activeTrainingIds, saveActiveTrainingIds]);
+
+  const getTrainingById = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await trainingService.getTrainingById(id);
+      
+      // Update the training in the list
+      setTrainings(prev => 
+        prev.map(t => t.id === id ? response : t)
+      );
+      
+      return response;
+    } catch (err: any) {
+      setError(err.message || `Failed to fetch training #${id}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const stopTraining = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await trainingService.cancelTraining(id);
+      
+      // Update status in the list
+      setTrainings(prev => 
+        prev.map(t => t.id === id ? {...t, status: 'cancelled'} : t)
+      );
+      
+      // Remove from active trainings
+      saveActiveTrainingIds(activeTrainingIds.filter(tId => tId !== id));
+    } catch (err: any) {
+      setError(err.message || `Failed to cancel training #${id}`);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTrainingIds, saveActiveTrainingIds]);
 
   return {
     trainings,
     trainingForm,
     loading,
     error,
-    startTraining,
-    directStartTraining, // Add the emergency direct method
-    stopTraining,
+    activeTrainingIds,
+    fetchTrainings,
+    refreshTrainings,
+    createTraining: startTraining,
+    directStartTraining,
     updateTrainingForm,
     resetTrainingForm,
-    refreshTrainings: fetchTrainings,
+    getTrainingById,
+    stopTraining,
+    DEFAULT_TRAINING_FORM
   };
 }
