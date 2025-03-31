@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react({
         // Add refresh for better DX
-        fastRefresh: true,
+      
       }),
     ],
 

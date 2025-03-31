@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from app.models.user import User
 import os
 import json
 import pandas as pd
@@ -29,6 +30,25 @@ async def upload_data(
 ) -> Any:
     """Upload a dataset file with optional preprocessing."""
     try:
+        # Check if there's at least one user in the system
+        user = db.query(User).first()
+        if not user:
+            # Create a default user if none exists
+            from app.core.security import get_password_hash
+            default_user = User(
+                email="admin@example.com",
+                full_name="Default Admin",
+                hashed_password=get_password_hash("defaultpassword"),
+                is_active=True,
+                is_superuser=True
+            )
+            db.add(default_user)
+            db.commit()
+            db.refresh(default_user)
+            owner_id = default_user.id
+        else:
+            owner_id = user.id
+
         # Extract file extension and check if allowed
         file_ext = os.path.splitext(file.filename)[1].lower()
         if file_ext not in settings.ALLOWED_EXTENSIONS:
@@ -38,8 +58,7 @@ async def upload_data(
             )
 
         # Create upload directory if it doesn't exist
-        # Using a fixed user_id=1 for development
-        user_upload_dir = os.path.join(settings.UPLOAD_FOLDER, "1")
+        user_upload_dir = os.path.join(settings.UPLOAD_FOLDER, str(owner_id))
         os.makedirs(user_upload_dir, exist_ok=True)
 
         # Generate a unique filename to avoid overwriting
@@ -116,7 +135,7 @@ async def upload_data(
                     detail="Invalid preprocessing configuration format"
                 )
 
-        # Create dataset record with hardcoded owner_id=1 for development
+        # Create dataset record with dynamic owner_id
         dataset = DatasetModel(
             name=name or os.path.splitext(file.filename)[0],
             description=description,
@@ -127,7 +146,7 @@ async def upload_data(
             num_features=num_features,
             preprocessing_config=parsed_preprocessing_config,
             meta_info=meta_info,
-            owner_id=1  # Hardcoded for development
+            owner_id=owner_id  # Use dynamic owner_id instead of hardcoded value
         )
         
         db.add(dataset)

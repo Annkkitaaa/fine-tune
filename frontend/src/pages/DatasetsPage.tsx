@@ -149,6 +149,55 @@ export const DatasetsPage: React.FC = () => {
       setUploadProgress(0);
     }
   };
+
+  // Add this function to your DatasetsPage component
+  const handleExportDataset = () => {
+    try {
+      // Check if we have data to export
+      if (!datasetSample || datasetSample.length === 0) {
+        setError("No data available to export");
+        return;
+      }
+
+      // Get only the columns that are currently selected for display
+      const columnsToExport = selectedColumns;
+      
+      // Create CSV content
+      let csvContent = columnsToExport.join(',') + '\n';
+      
+      // Add data rows
+      datasetSample.forEach(row => {
+        const rowValues = columnsToExport.map(col => {
+          const value = row[col];
+          // Handle different data types properly
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'object') return JSON.stringify(value).replace(/"/g, '""');
+          return String(value).replace(/"/g, '""'); // Escape quotes
+        });
+        csvContent += rowValues.join(',') + '\n';
+      });
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      // Set download attributes
+      const fileName = `${selectedDataset?.name || 'dataset'}_filtered.csv`;
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (err) {
+      console.error("Export error:", err);
+      setError("Failed to export dataset");
+    }
+  };
   
   // Delete dataset confirmation
   const handleDeleteDataset = async (datasetId: number) => {
@@ -565,7 +614,12 @@ export const DatasetsPage: React.FC = () => {
               </p>
             </div>
             <div className="flex space-x-2">
-              <Button variant="secondary" size="sm">
+            <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportDataset}
+                disabled={!datasetSample || datasetSample.length === 0}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>

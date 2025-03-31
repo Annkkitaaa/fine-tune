@@ -1,32 +1,35 @@
-# alembic/env.py
+from logging.config import fileConfig
 import os
 import sys
-from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 
-# Add the parent directory to sys.path
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-# Import your models
-from app.db.base import Base
-from app.core.config import settings
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # Interpret the config file for Python logging.
+# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Set the database URL in the alembic.ini file
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Add the parent directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-# add your model's MetaData object here
+# Import Base and models
+from app.db.base_class import Base
+# Import all models here so they're registered with the metadata
+from app.models.user import User
+from app.models.dataset import Dataset
+from app.models.project import Project
+from app.models.training import Training
+from app.models.evaluation import Evaluation
+from app.models.pipeline import Pipeline
+
+# Set target metadata
 target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
@@ -42,10 +45,11 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
@@ -53,12 +57,12 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         context.configure(
             connection=connection, 
-            target_metadata=target_metadata,
-            compare_type=True
+            target_metadata=target_metadata
         )
 
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()
