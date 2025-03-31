@@ -5,7 +5,7 @@ import {
   TrainingFormState,
   TrainingCreateRequest,
   DEFAULT_TRAINING_FORM
-} from '@/lib/types/training';
+} from '@/types/training.types';
 import { trainingService } from '@/lib/services/training';
 
 // Key to store training IDs in localStorage

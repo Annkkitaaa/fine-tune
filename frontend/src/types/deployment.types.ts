@@ -1,21 +1,19 @@
-// Add this to the deployment.types.ts file
-export interface SpheronDeploymentConfig {
-  instances: number;
+// src/lib/types/deployment.ts
+export interface DeploymentMetrics {
   cpu: number;
   memory: number;
-  gpu: number;
-  autoscaling: boolean;
-  env_vars: Record<string, string>;
+  requests: number;
+  latency: number;
 }
 
-export interface SpheronDeploymentRequest {
+export interface MetricsData {
   name: string;
-  description?: string;
-  model_id: number;
-  config: SpheronDeploymentConfig;
+  requests: number;
+  latency: number;
+  cpu: number;
+  memory: number;
 }
 
-// Update the Deployment interface
 export interface Deployment {
   id: number;
   name: string;
@@ -24,12 +22,32 @@ export interface Deployment {
   model_name?: string;
   owner_id: number;
   status: DeploymentStatus;
-  provider: string; // Add provider field
-  provider_deployment_id?: string; // Add provider deployment ID
   endpoint_url?: string;
   instances: number;
-  metrics?: Partial<DeploymentMetrics>;
+  metrics?: Partial<DeploymentMetrics>; // Made partial to handle potentially missing metrics
   start_time?: string;
   created_at: string;
   updated_at?: string;
+}
+
+export type DeploymentStatus = 'running' | 'stopped' | 'failed' | 'pending';
+
+export interface DeploymentFormState {
+  name: string;
+  description: string;
+  modelId: string;
+  instanceType: string;
+  minInstances: number;
+  maxInstances: number;
+  scalingThreshold: number;
+}
+
+export interface DeploymentCreateRequest {
+  name: string;
+  description?: string;
+  model_id: number;
+  instance_type: string;
+  min_instances: number;
+  max_instances: number;
+  scaling_threshold: number;
 }

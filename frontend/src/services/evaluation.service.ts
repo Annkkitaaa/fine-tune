@@ -1,8 +1,20 @@
-import { Evaluation, EvaluationCreate } from '@/types';
+// src/lib/services/evaluation.ts
+import { apiClient } from '@/lib/api-client';
+import { 
+  Evaluation, 
+  EvaluationCreateRequest 
+} from '@/types/evaluation.types';
 
 export const evaluationService = {
-  evaluateModel: (modelId: number, data: EvaluationCreate) => 
-    apiService.post<Evaluation>(`/evaluation/${modelId}/evaluate`, data),
-  getEvaluation: (id: number) => 
-    apiService.get<Evaluation>(`/evaluation/${id}`),
+  listEvaluations: () =>
+    apiClient.request<Evaluation[]>('/evaluation/list'),
+
+  getEvaluation: (id: number) =>
+    apiClient.request<Evaluation>(`/evaluation/${id}`),
+
+  evaluateModel: (modelId: number, data: EvaluationCreateRequest) =>
+    apiClient.request<Evaluation>(`/evaluation/${modelId}/evaluate`, {
+      method: 'POST',
+      data,
+    }),
 };

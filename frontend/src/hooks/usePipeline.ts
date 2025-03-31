@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   Pipeline, 
   PipelineFormState 
-} from '@/lib/types/pipeline';
+} from '@/types/pipeline.types';
 import { pipelineService } from '@/lib/services/pipeline';
 import { DEFAULT_PIPELINE_FORM } from '@/lib/constants/pipeline';
 

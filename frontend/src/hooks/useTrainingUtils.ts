@@ -1,5 +1,5 @@
 // src/hooks/useTrainingUtils.ts
-import { Training, TrainingState } from '@/lib/types/training';
+import { Training, TrainingState } from '@/types/training.types';
 
 export function useTrainingUtils() {
   const getStatusColor = (status: TrainingState) => {

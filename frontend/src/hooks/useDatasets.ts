@@ -1,6 +1,6 @@
 // src/hooks/useDatasets.ts
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Dataset } from '@/types/dataset.types';
+import { Dataset, PreprocessingConfig } from '@/types/dataset.types';
 import { datasetsService } from '@/services/datasets.service';
 
 interface UseDatasetOptions {
@@ -36,8 +36,6 @@ export function useDatasets(options: UseDatasetOptions = {}) {
         skip: page * (options.pageSize || 50),
         limit: options.pageSize || 50,
       });
-
-      console.log("Raw datasets response:", response);
       
       if (Array.isArray(response)) {
         if (page === 0) {
@@ -47,12 +45,6 @@ export function useDatasets(options: UseDatasetOptions = {}) {
         }
         setHasMore(response.length === (options.pageSize || 50));
         setCurrentPage(page);
-        
-        // Debug the dataset structure
-        if (response.length > 0) {
-          console.log("First dataset fields:", Object.keys(response[0]));
-          console.log("First dataset sample:", JSON.stringify(response[0], null, 2));
-        }
       } else {
         console.error("Invalid response format for datasets:", response);
       }
@@ -72,13 +64,20 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     file: File, 
     name?: string, 
     description?: string, 
-    format?: string
+    format?: string,
+    preprocessingConfig?: PreprocessingConfig
   ) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await datasetsService.uploadDataset(file, name, description, format);
+      const response = await datasetsService.uploadDataset(
+        file, 
+        name, 
+        description, 
+        format,
+        preprocessingConfig
+      );
       
       // Add the new dataset to the list
       if (response) {
@@ -111,6 +110,48 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     }
   }, []);
 
+  const viewDatasetSample = useCallback(async (id: number, filters?: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await datasetsService.getDatasetSample(id, filters);
+      return response;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to get dataset sample';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const preprocessDataset = useCallback(async (
+    id: number,
+    preprocessingConfig: PreprocessingConfig,
+    selectedColumns?: string[],
+    filterCondition?: string
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await datasetsService.preprocessDataset(
+        id,
+        preprocessingConfig,
+        selectedColumns,
+        filterCondition
+      );
+      return response;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to preprocess dataset';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
       fetchDatasets(currentPage + 1);
@@ -135,6 +176,8 @@ export function useDatasets(options: UseDatasetOptions = {}) {
     fetchDatasets,
     uploadDataset,
     deleteDataset,
+    viewDatasetSample,
+    preprocessDataset,
     loadMore,
   };
 }

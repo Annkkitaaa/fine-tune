@@ -1,5 +1,5 @@
 // src/pages/DeploymentPage.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -15,16 +15,17 @@ import {
   Pause, 
   AlertCircle,
   RefreshCw,
-  Download,
-  Cloud
+  Cloud,
+  ExternalLink
 } from 'lucide-react';
 import { useDeployments } from '@/hooks/useDeployments';
 import { useModels } from '@/hooks/useModels';
 import { MetricsVisualization } from '@/components/MetricsVisualization';
 import { INSTANCE_TYPES } from '@/lib/constants/deployment';
-import { Deployment, DeploymentFormState, DeploymentStatus, SpheronDeploymentRequest } from '@/types/deployment.types';
-import { SpheronConfig } from '@/components/spheron/SpheronConfig';
-import { DeploymentForm } from '@/components/DeploymentForm';
+import { Deployment, DeploymentStatus } from '@/types/deployment.types';
+import { SpheronDeploymentForm } from '@/components/deployment/SpheronDeploymentForm';
+import { SpheronDeploymentCard } from '@/components/deployment/SpheronDeploymentCard';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 
 export const DeploymentPage: React.FC = () => {
   const {
@@ -37,31 +38,47 @@ export const DeploymentPage: React.FC = () => {
     toggleDeploymentStatus,
     restartDeployment,
     deleteDeployment,
-    refreshDeployments,
-    spheronConfig,
-    updateSpheronConfig
+    refreshDeployments
   } = useDeployments();
 
-  const { models, loading: modelsLoading, fetchModels } = useModels();
+  const { models } = useModels();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDeployForm, setShowDeployForm] = useState(false);
-  const [showSpheronConfig, setShowSpheronConfig] = useState(false);
+  const [deploymentType, setDeploymentType] = useState<'standard' | 'spheron' | null>(null);
+  const [deployForm, setDeployForm] = useState({
+    name: '',
+    description: '',
+    modelId: '',
+    instanceType: 'cpu-small',
+    minInstances: 1,
+    maxInstances: 3,
+    scalingThreshold: 80,
+  });
 
-  useEffect(() => {
-    fetchModels();
-  }, [fetchModels]);
-
-  const handleCreateDeployment = async (deploymentData: any) => {
+  const handleCreateDeployment = async () => {
     try {
-      if (deploymentData.type === 'spheron') {
-        await createSpheronDeployment(deploymentData.data);
-      } else {
-        await createDeployment(deploymentData.data);
-      }
-      setShowDeployForm(false);
+      await createDeployment({
+        name: deployForm.name,
+        description: deployForm.description,
+        model_id: parseInt(deployForm.modelId),
+        instance_type: deployForm.instanceType,
+        min_instances: deployForm.minInstances,
+        max_instances: deployForm.maxInstances,
+        scaling_threshold: deployForm.scalingThreshold,
+      });
+      setDeploymentType(null);
+      resetForm();
     } catch (error) {
       console.error('Failed to create deployment:', error);
+    }
+  };
+
+  const handleCreateSpheronDeployment = async (data: any) => {
+    try {
+      await createSpheronDeployment(data);
+      setDeploymentType(null);
+    } catch (error) {
+      console.error('Failed to create Spheron deployment:', error);
     }
   };
 
@@ -89,15 +106,37 @@ export const DeploymentPage: React.FC = () => {
     }
   };
 
-  const handleSpheronConfigChange = (config: any) => {
-    updateSpheronConfig(config);
-    setShowSpheronConfig(false);
+  const resetForm = () => {
+    setDeployForm({
+      name: '',
+      description: '',
+      modelId: '',
+      instanceType: 'cpu-small',
+      minInstances: 1,
+      maxInstances: 3,
+      scalingThreshold: 80,
+    });
   };
 
   const filteredDeployments = deployments.filter(deployment => 
     deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     deployment.model_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const formatUptime = (startTime?: string) => {
+    if (!startTime) return '-';
+    const start = new Date(startTime);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
+
+    const days = Math.floor(diff / 86400);
+    const hours = Math.floor((diff % 86400) / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
 
   if (loading && !deployments.length) {
     return (
@@ -120,16 +159,16 @@ export const DeploymentPage: React.FC = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button 
-            variant="outline"
-            onClick={() => setShowSpheronConfig(true)}
-          >
-            <Cloud className="w-4 h-4 mr-2" />
-            Spheron Setup
-          </Button>
-          <Button onClick={() => setShowDeployForm(true)}>
+          <Button onClick={() => setDeploymentType('standard')}>
             <Rocket className="w-4 h-4 mr-2" />
             Deploy Model
+          </Button>
+          <Button 
+            onClick={() => setDeploymentType('spheron')}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Cloud className="w-4 h-4 mr-2" />
+            Deploy with Spheron
           </Button>
         </div>
       </div>
@@ -141,17 +180,117 @@ export const DeploymentPage: React.FC = () => {
         </Alert>
       )}
 
-      {showSpheronConfig && (
-        <SpheronConfig onConfigChange={handleSpheronConfigChange} />
-      )}
-
-      {showDeployForm && (
-        <DeploymentForm
-          models={models.map(model => ({ value: model.id.toString(), label: model.name }))}
-          loading={loading}
-          onSubmit={handleCreateDeployment}
-          onCancel={() => setShowDeployForm(false)}
-        />
+      {deploymentType !== null && (
+        <Tabs 
+          defaultValue={deploymentType} 
+          className="mb-8"
+          onValueChange={(value) => setDeploymentType(value as 'standard' | 'spheron')}
+        >
+          <TabsList className="mb-4">
+            <TabsTrigger value="standard">Standard Deployment</TabsTrigger>
+            <TabsTrigger value="spheron">Spheron Protocol</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="standard">
+            <Card className="mb-8">
+              <CardHeader>
+                <h2 className="text-xl font-semibold">Deploy Model</h2>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                    <Input
+                      label="Name"
+                      value={deployForm.name}
+                      onChange={(e) => setDeployForm({ ...deployForm, name: e.target.value })}
+                    />
+                    <Input
+                      label="Description"
+                      value={deployForm.description}
+                      onChange={(e) => setDeployForm({ ...deployForm, description: e.target.value })}
+                    />
+                    <Select
+                      label="Model"
+                      options={models}
+                      value={deployForm.modelId}
+                      onChange={(value) => setDeployForm({ ...deployForm, modelId: value })}
+                    />
+                    <Select
+                      label="Instance Type"
+                      options={INSTANCE_TYPES}
+                      value={deployForm.instanceType}
+                      onChange={(value) => setDeployForm({ ...deployForm, instanceType: value })}
+                    />
+                  </div>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        label="Min Instances"
+                        type="number"
+                        min={1}
+                        value={deployForm.minInstances}
+                        onChange={(e) => setDeployForm({ 
+                          ...deployForm, 
+                          minInstances: parseInt(e.target.value) 
+                        })}
+                      />
+                      <Input
+                        label="Max Instances"
+                        type="number"
+                        min={1}
+                        value={deployForm.maxInstances}
+                        onChange={(e) => setDeployForm({ 
+                          ...deployForm, 
+                          maxInstances: parseInt(e.target.value) 
+                        })}
+                      />
+                    </div>
+                    <Slider
+                      label="Scaling Threshold (%)"
+                      min={50}
+                      max={95}
+                      value={deployForm.scalingThreshold}
+                      onChange={(value) => setDeployForm({ 
+                        ...deployForm, 
+                        scalingThreshold: value 
+                      })}
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end space-x-4">
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setDeploymentType(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateDeployment}
+                    disabled={loading || !deployForm.name || !deployForm.modelId}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Deploying...
+                      </>
+                    ) : (
+                      'Deploy'
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="spheron">
+            <SpheronDeploymentForm
+              models={models}
+              loading={loading}
+              onSubmit={handleCreateSpheronDeployment}
+              onCancel={() => setDeploymentType(null)}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Metrics Visualizations */}
@@ -193,89 +332,92 @@ export const DeploymentPage: React.FC = () => {
         <CardContent>
           <div className="space-y-4">
             {filteredDeployments.map((deployment) => (
-              <div
-                key={deployment.id}
-                className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-medium">{deployment.name}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {deployment.endpoint_url}
-                    </p>
-                    {deployment.provider === 'spheron' && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                        <Cloud className="w-3 h-3 mr-1" />
-                        Spheron
-                      </span>
-                    )}
+              <div key={deployment.id}>
+                {deployment.provider === 'spheron' ? (
+                  <SpheronDeploymentCard
+                    deployment={deployment}
+                    onToggleStatus={() => handleToggleStatus(deployment.id, deployment.status)}
+                    onRestart={() => handleRestartDeployment(deployment.id)}
+                    onDelete={() => handleDeleteDeployment(deployment.id)}
+                    loading={loading}
+                  />
+                ) : (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium">{deployment.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {deployment.endpoint_url}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            deployment.status === 'running'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                          }`}
+                        >
+                          {deployment.status}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant={deployment.status === 'running' ? 'destructive' : 'default'}
+                          onClick={() => handleToggleStatus(deployment.id, deployment.status)}
+                          disabled={loading}
+                        >
+                          {deployment.status === 'running' ? (
+                            <Pause className="w-4 h-4" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleRestartDeployment(deployment.id)}
+                          disabled={loading}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteDeployment(deployment.id)}
+                          disabled={loading}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Instances:</span>{' '}
+                        {deployment.instances}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">CPU:</span>{' '}
+                        {deployment.metrics?.cpu}%
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Memory:</span>{' '}
+                        {deployment.metrics?.memory}%
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Requests:</span>{' '}
+                        {deployment.metrics?.requests}/s
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Latency:</span>{' '}
+                        {deployment.metrics?.latency}ms
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-gray-500 dark:text-gray-400">Uptime:</span>{' '}
+                        {formatUptime(deployment.start_time)}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        deployment.status === 'running'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}
-                    >
-                      {deployment.status}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant={deployment.status === 'running' ? 'destructive' : 'default'}
-                      onClick={() => handleToggleStatus(deployment.id, deployment.status)}
-                      disabled={loading || deployment.provider === 'spheron'} // Disable for Spheron deployments
-                    >
-                      {deployment.status === 'running' ? (
-                        <Pause className="w-4 h-4" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleRestartDeployment(deployment.id)}
-                      disabled={loading || deployment.provider === 'spheron'} // Disable for Spheron deployments
-                    >
-                      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDeleteDeployment(deployment.id)}
-                      disabled={loading}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Instances:</span>{' '}
-                    {deployment.instances}
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">CPU:</span>{' '}
-                    {deployment.metrics?.cpu}%
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Memory:</span>{' '}
-                    {deployment.metrics?.memory}%
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Requests:</span>{' '}
-                    {deployment.metrics?.requests}/s
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Latency:</span>{' '}
-                    {deployment.metrics?.latency}ms
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Uptime:</span>{' '}
-                    {formatUptime(deployment.start_time)}
-                  </div>
-                </div>
+                )}
               </div>
             ))}
 
@@ -291,22 +433,6 @@ export const DeploymentPage: React.FC = () => {
       </Card>
     </div>
   );
-};
-
-// Utility function to format uptime
-const formatUptime = (startTime?: string) => {
-  if (!startTime) return '-';
-  const start = new Date(startTime);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
-
-  const days = Math.floor(diff / 86400);
-  const hours = Math.floor((diff % 86400) / 3600);
-  const minutes = Math.floor((diff % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
 };
 
 export default DeploymentPage;

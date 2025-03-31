@@ -1,5 +1,5 @@
 // src/lib/constants/training.ts
-import { TrainingFormState } from '@/lib/types/training';
+import { TrainingFormState } from '@/types/training.types';
 import { SelectOption } from '@/types';
 
 // Batch size options

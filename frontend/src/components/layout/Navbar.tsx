@@ -5,7 +5,7 @@ import { useThemeStore } from '@/store/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { AuthModal } from '@/components/auth/AuthModal';
-import { Sun, Moon, Menu, X, BarChart2, Database, Brain, Rocket, GitBranch, LineChart, Home, LogOut } from 'lucide-react';
+import { Sun, Moon, Menu, X, BarChart2, Database, Brain, Rocket, GitBranch, LineChart, Home, LogOut, Cloud } from 'lucide-react';
 
 interface NavbarProps {
   onSignInClick: () => void;
@@ -25,6 +25,7 @@ export const Navbar: React.FC = () => {
     { name: 'Deployment', href: '/deployment', icon: Rocket },
     { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
     { name: 'Evaluation', href: '/evaluation', icon: LineChart },
+    { name: 'Spheron', href: '/spheron', icon: Cloud }, // Add this line
   ];
 
   const isActive = (path: string) => location.pathname.startsWith(path);

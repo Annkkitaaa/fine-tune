@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { useThemeStore } from './store/theme';
@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { AuthModal } from './components/auth/AuthModal';
 import { Alert, AlertDescription } from './components/ui/Alert';
 import { formatError } from './components/utils/error';
+import { SpheronConfig } from './components/spheron/SpheronConfig';
 
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('./pages/HomePage'));
@@ -18,6 +19,7 @@ const TrainingPage = React.lazy(() => import('./pages/TrainingPage'));
 const DeploymentPage = React.lazy(() => import('./pages/DeploymentPage'));
 const EvaluationPage = React.lazy(() => import('./pages/EvaluationPage'));
 const PipelinePage = React.lazy(() => import('./pages/PipelinePage'));
+const SpheronSettingsPage = React.lazy(() => import('./pages/SpheronSettingsPage'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -47,6 +49,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const AppRoutes = () => {
   const location = useLocation();
   const { error } = useAuth();
+  const [spheronSetupComplete, setSpheronSetupComplete] = useState(false);
+
+  useEffect(() => {
+    const checkSpheronSetup = () => {
+      const hasConfig = localStorage.getItem('spheron_config');
+      setSpheronSetupComplete(!!hasConfig);
+    };
+    
+    checkSpheronSetup();
+  }, []);
+
+  const handleSpheronConfigChange = (config: any) => {
+    console.log("Spheron configuration updated:", config);
+    setSpheronSetupComplete(true);
+  };
 
   return (
     <>
@@ -113,6 +130,22 @@ const AppRoutes = () => {
             <ProtectedRoute>
               <PipelinePage />
             </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/spheron"
+          element={
+            <ProtectedRoute>
+              <SpheronSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/spheron-setup"
+          element={
+            <SpheronConfig onConfigChange={handleSpheronConfigChange} />
           }
         />
 

@@ -1,4 +1,6 @@
+// src/lib/api-client.ts
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import { DEV_CONFIG } from '@/config/dev-config';
 
 // Make sure this matches your backend URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -43,10 +45,16 @@ class ApiClient {
           };
         }
         
-        // Add auth token if available
-        const token = localStorage.getItem(TOKEN_KEY);
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // If auth bypass is enabled, always add mock token
+        if (DEV_CONFIG.BYPASS_AUTH) {
+          config.headers.Authorization = `Bearer ${DEV_CONFIG.MOCK_TOKEN}`;
+          console.log('Development mode: Adding mock auth token to request');
+        } else {
+          // Normal authentication - add token if available
+          const token = localStorage.getItem(TOKEN_KEY);
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         
         return config;
@@ -79,6 +87,13 @@ class ApiClient {
         method: axiosError.config?.method,
         data: axiosError.response?.data
       });
+      
+      // In development mode with auth bypass, handle 401/403 errors specially
+      if (DEV_CONFIG.BYPASS_AUTH && 
+          (axiosError.response?.status === 401 || axiosError.response?.status === 403)) {
+        console.warn('Authentication error received but bypassed in development mode');
+        return new Error('Authentication error (bypassed in development mode)');
+      }
       
       // Handle timeout errors specifically
       if (axiosError.code === 'ECONNABORTED') {
@@ -119,8 +134,11 @@ class ApiClient {
         case 400:
           return new Error('Invalid request data. Please check your inputs.');
         case 401:
-          localStorage.removeItem(TOKEN_KEY);
-          return new Error('Your session has expired. Please log in again.');
+          if (!DEV_CONFIG.BYPASS_AUTH) {
+            localStorage.removeItem(TOKEN_KEY);
+            return new Error('Your session has expired. Please log in again.');
+          }
+          return new Error('Authentication error (development mode)');
         case 403:
           return new Error('You do not have permission to perform this action.');
         case 404:
@@ -169,6 +187,23 @@ class ApiClient {
       console.error(`Request to ${endpoint} failed:`, error);
       throw this.handleError(error);
     }
+  }
+
+  // Helper methods for common HTTP methods
+  async get<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...config, method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any, config: AxiosRequestConfig = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...config, method: 'POST', data });
+  }
+
+  async put<T>(endpoint: string, data?: any, config: AxiosRequestConfig = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...config, method: 'PUT', data });
+  }
+
+  async delete<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
+    return this.request<T>(endpoint, { ...config, method: 'DELETE' });
   }
 }
 

@@ -73,9 +73,15 @@ export default defineConfig(({ mode }) => {
       minify: 'terser',
       terserOptions: {
         compress: {
-          drop_console: true,
-          drop_debugger: true,
+          drop_console: false, // Changed to false for debugging
+          drop_debugger: false, // Changed to false for debugging
         },
+      },
+
+      // Added CommonJS options for Spheron SDK
+      commonjsOptions: {
+        transformMixedEsModules: true,
+        include: [/node_modules/],
       },
     },
 
@@ -88,8 +94,24 @@ export default defineConfig(({ mode }) => {
         '@radix-ui/react-alert',
         '@radix-ui/react-dialog',
         'lucide-react',
+        '@spheron/protocol-sdk', // Added Spheron SDK
       ],
       exclude: ['@auth/core'],
+      esbuildOptions: {
+        // Node.js global to browser globalThis
+        define: {
+          global: 'globalThis',
+        },
+      },
+    },
+
+    // Add define to fix Node.js environment variables
+    define: {
+      'process.env': JSON.stringify({
+        ...env,
+        NODE_ENV: mode
+      }),
+      'global': 'globalThis',
     },
   };
 });

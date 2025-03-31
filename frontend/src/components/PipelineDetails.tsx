@@ -9,7 +9,7 @@ import {
   BarChart2,
   AlertCircle,
 } from 'lucide-react';
-import { Pipeline } from '@/lib/types/pipeline';
+import { Pipeline } from '@/types/pipeline.types';
 
 interface PipelineDetailsProps {
   pipeline: Pipeline;

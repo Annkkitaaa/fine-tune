@@ -4,7 +4,7 @@ import {
   Evaluation, 
   EvaluationCreateRequest,
   EvaluationFormState 
-} from '@/lib/types/evaluation';
+} from '@/types/evaluation.types';
 import { evaluationService } from '@/lib/services/evaluation';
 import { DEFAULT_EVALUATION_FORM } from '@/lib/constants/evaluation';
 
