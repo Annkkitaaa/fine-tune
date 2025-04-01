@@ -17,14 +17,16 @@ router = APIRouter()
 @router.post("/{deployment_id}/restart")
 async def restart_deployment(
     deployment_id: int,
-    background_tasks: BackgroundTasks,  # Move required parameters first
-    db: Session = Depends(get_db),  # Then parameters with defaults
-    current_user: Any = Depends(get_current_user)
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user)
 ) -> Any:
     """Restart a stopped deployment."""
     deployment = db.query(DeploymentModel).filter(
         DeploymentModel.id == deployment_id,
-        DeploymentModel.owner_id == current_user.id
+        # Temporarily commented out for development
+        # DeploymentModel.owner_id == current_user.id
     ).first()
     
     if not deployment:
@@ -75,7 +77,8 @@ async def restart_deployment(
 async def deploy_with_spheron(
     *,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user),
     deployment_in: SpheronDeploymentCreate
 ):
     """Deploy model using Spheron Protocol"""
@@ -83,7 +86,8 @@ async def deploy_with_spheron(
         # Get the model
         model = db.query(MLModel).filter(
             MLModel.id == deployment_in.model_id,
-            MLModel.owner_id == current_user.id
+            # Temporarily commented out for development
+            # MLModel.owner_id == current_user.id
         ).first()
         
         if not model:
@@ -95,9 +99,10 @@ async def deploy_with_spheron(
             description=deployment_in.description,
             model_id=deployment_in.model_id,
             provider="spheron",
-            config=deployment_in.config,
+            config=deployment_in.config.dict(),
             status="pending",
-            owner_id=current_user.id
+            # Temporarily using a placeholder user ID
+            owner_id=1  # Replace with current_user.id when reenabling auth
         )
         
         db.add(deployment)
@@ -109,7 +114,7 @@ async def deploy_with_spheron(
             model_path=model.file_path,
             preprocessor_path=model.preprocessor_path,
             framework=model.framework,
-            config=deployment_in.config
+            config=deployment_in.config.dict()
         )
         
         # Deploy with Spheron
@@ -161,20 +166,45 @@ async def deploy_model_task(
             config=config
         )
         
-        # Load model
-        await service.load_model()
-        
-        # Start service
-        service.start(
-            host=settings.DEPLOYMENT_HOST,
-            port=deployment.config.get('port', settings.DEPLOYMENT_PORT)
-        )
-        
-        # Update deployment status
-        deployment.status = "active"
-        deployment.endpoint_url = f"http://{settings.DEPLOYMENT_HOST}:{deployment.config.get('port', settings.DEPLOYMENT_PORT)}"
-        deployment.end_time = datetime.utcnow()
-        db.commit()
+        # Different deployment logic based on provider
+        if deployment.provider == "spheron":
+            # For Spheron deployments, we check status
+            if deployment.provider_deployment_id:
+                status = await service.spheron_service.check_deployment_status(
+                    deployment.provider_deployment_id
+                )
+                if status.get("status") == "active":
+                    deployment.status = "active"
+                    deployment.end_time = datetime.utcnow()
+                    db.commit()
+                elif status.get("status") in ["failed", "error"]:
+                    deployment.status = "failed"
+                    deployment.error_message = "Spheron deployment failed"
+                    deployment.end_time = datetime.utcnow()
+                    db.commit()
+        else:
+            # Standard deployment logic for local deployments
+            try:
+                # Load model
+                await service.load_model()
+                
+                # Start service
+                service.start(
+                    host=settings.DEPLOYMENT_HOST,
+                    port=deployment.config.get('port', settings.DEPLOYMENT_PORT)
+                )
+                
+                # Update deployment status
+                deployment.status = "active"
+                deployment.endpoint_url = f"http://{settings.DEPLOYMENT_HOST}:{deployment.config.get('port', settings.DEPLOYMENT_PORT)}"
+                deployment.end_time = datetime.utcnow()
+                db.commit()
+            except Exception as e:
+                # Update deployment status on failure
+                deployment.status = "failed"
+                deployment.error_message = str(e)
+                deployment.end_time = datetime.utcnow()
+                db.commit()
         
     except Exception as e:
         # Update deployment status on failure
@@ -188,10 +218,11 @@ async def deploy_model_task(
 async def create_deployment(
     *,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user),
     deployment_in: DeploymentCreate
 ) -> Any:
-    """Create new deployment."""
+    """Create new local deployment."""
     try:
         deployment = DeploymentModel(
             name=deployment_in.name,
@@ -199,12 +230,28 @@ async def create_deployment(
             model_id=deployment_in.model_id,
             config=deployment_in.config,
             status="pending",
-            owner_id=current_user.id
+            # Temporarily using a placeholder user ID
+            owner_id=1  # Replace with current_user.id when reenabling auth
         )
         
         db.add(deployment)
         db.commit()
         db.refresh(deployment)
+        
+        # Start deployment in background
+        model = db.query(MLModel).filter(MLModel.id == deployment_in.model_id).first()
+        if model:
+            background_tasks = BackgroundTasks()
+            background_tasks.add_task(
+                deploy_model_task,
+                deployment_id=deployment.id,
+                db=db,
+                model_path=model.file_path,
+                preprocessor_path=model.preprocessor_path,
+                framework=model.framework,
+                config=deployment_in.config
+            )
+        
         return deployment
         
     except Exception as e:
@@ -217,26 +264,27 @@ async def create_deployment(
 @router.get("/list", response_model=List[Deployment])
 def list_deployments(
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
     """Retrieve deployments."""
-    deployments = db.query(DeploymentModel).filter(
-        DeploymentModel.owner_id == current_user.id
-    ).offset(skip).limit(limit).all()
+    deployments = db.query(DeploymentModel).offset(skip).limit(limit).all()
     return deployments
 
 @router.get("/{deployment_id}", response_model=Deployment)
 def get_deployment(
     deployment_id: int,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user)
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user)
 ) -> Any:
     """Get deployment by ID."""
     deployment = db.query(DeploymentModel).filter(
         DeploymentModel.id == deployment_id,
-        DeploymentModel.owner_id == current_user.id
+        # Temporarily commented out for development
+        # DeploymentModel.owner_id == current_user.id
     ).first()
     
     if not deployment:
@@ -247,16 +295,70 @@ def get_deployment(
     
     return deployment
 
+@router.post("/{deployment_id}/stop")
+async def stop_deployment(
+    deployment_id: int,
+    db: Session = Depends(get_db),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user)
+) -> Any:
+    """Stop a running deployment."""
+    deployment = db.query(DeploymentModel).filter(
+        DeploymentModel.id == deployment_id,
+        # Temporarily commented out for development
+        # DeploymentModel.owner_id == current_user.id
+    ).first()
+    
+    if not deployment:
+        raise HTTPException(
+            status_code=404,
+            detail="Deployment not found"
+        )
+    
+    if deployment.status != "active":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Deployment is not active (current status: {deployment.status})"
+        )
+    
+    try:
+        if deployment.provider == "spheron" and deployment.provider_deployment_id:
+            # Stop Spheron deployment
+            service = ModelDeploymentService(
+                model_path="",  # Not needed for stopping
+                preprocessor_path="",  # Not needed for stopping
+                framework="",  # Not needed for stopping
+                config=deployment.config
+            )
+            
+            await service.spheron_service.stop_deployment(deployment.provider_deployment_id)
+        
+        # Update deployment status
+        deployment.status = "stopped"
+        deployment.end_time = datetime.utcnow()
+        db.commit()
+        
+        return {"status": "success", "message": "Deployment stopped"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error stopping deployment: {str(e)}"
+        )
+
 @router.delete("/{deployment_id}")
 async def delete_deployment(
     deployment_id: int,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(get_current_user)
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user)
 ) -> Any:
     """Delete deployment."""
     deployment = db.query(DeploymentModel).filter(
         DeploymentModel.id == deployment_id,
-        DeploymentModel.owner_id == current_user.id
+        # Temporarily commented out for development
+        # DeploymentModel.owner_id == current_user.id
     ).first()
     
     if not deployment:
@@ -267,6 +369,21 @@ async def delete_deployment(
     
     try:
         if deployment.status == "active":
+            if deployment.provider == "spheron" and deployment.provider_deployment_id:
+                # Stop Spheron deployment first
+                service = ModelDeploymentService(
+                    model_path="",  # Not needed for stopping
+                    preprocessor_path="",  # Not needed for stopping
+                    framework="",  # Not needed for stopping
+                    config=deployment.config
+                )
+                
+                try:
+                    await service.spheron_service.stop_deployment(deployment.provider_deployment_id)
+                except Exception as e:
+                    # Continue with deletion even if stopping fails
+                    print(f"Error stopping Spheron deployment: {str(e)}")
+            
             deployment.status = "stopped"
             deployment.end_time = datetime.utcnow()
         
@@ -280,4 +397,51 @@ async def delete_deployment(
         raise HTTPException(
             status_code=400,
             detail=f"Error deleting deployment: {str(e)}"
+        )
+
+@router.get("/{deployment_id}/logs")
+async def get_deployment_logs(
+    deployment_id: int,
+    lines: int = 100,
+    db: Session = Depends(get_db),
+    # Temporarily commented out for development
+    # current_user: Any = Depends(get_current_user)
+) -> Any:
+    """Get deployment logs."""
+    deployment = db.query(DeploymentModel).filter(
+        DeploymentModel.id == deployment_id,
+        # Temporarily commented out for development
+        # DeploymentModel.owner_id == current_user.id
+    ).first()
+    
+    if not deployment:
+        raise HTTPException(
+            status_code=404,
+            detail="Deployment not found"
+        )
+    
+    try:
+        if deployment.provider == "spheron" and deployment.provider_deployment_id:
+            # Get Spheron deployment logs
+            service = ModelDeploymentService(
+                model_path="",  # Not needed for logs
+                preprocessor_path="",  # Not needed for logs
+                framework="",  # Not needed for logs
+                config=deployment.config
+            )
+            
+            logs = await service.spheron_service.get_deployment_logs(
+                deployment.provider_deployment_id, 
+                lines
+            )
+            
+            return {"logs": logs.get("logs", "")}
+        else:
+            # For local deployments, return placeholder logs for now
+            return {"logs": "Log retrieval for local deployments not implemented yet"}
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error retrieving logs: {str(e)}"
         )

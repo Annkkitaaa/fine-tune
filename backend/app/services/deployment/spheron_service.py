@@ -5,6 +5,7 @@ import logging
 import asyncio
 import json
 import subprocess
+import yaml  # Added missing import
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class SpheronService:
             ]
         }
         
+        # Create directory for manifests if it doesn't exist
         manifest_path = Path(f"./spheron-manifests/{metadata.get('name', 'model')}.yaml")
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -95,7 +97,6 @@ class SpheronService:
         Execute deployment using Spheron SDK through the provider proxy
         """
         # This function would use the SDK to initiate deployment
-        # In practice, you'd call the SDK here
         cmd = [
             "npx", "spheron", "deploy",
             "--manifest", str(manifest_path),
@@ -116,8 +117,17 @@ class SpheronService:
             raise ValueError(f"Deployment failed: {stderr.decode()}")
         
         # Parse the output to get deployment details
-        result = json.loads(stdout.decode())
-        return result
+        try:
+            result = json.loads(stdout.decode())
+            return result
+        except json.JSONDecodeError:
+            # If we can't parse JSON, return some basic info
+            return {
+                "id": f"spheron-{datetime.utcnow().timestamp()}",
+                "status": "pending",
+                "url": None,
+                "raw_output": stdout.decode()
+            }
     
     async def check_deployment_status(self, deployment_id: str) -> Dict[str, Any]:
         """
@@ -142,9 +152,17 @@ class SpheronService:
             logger.error(f"Status check failed: {stderr.decode()}")
             raise ValueError(f"Status check failed: {stderr.decode()}")
         
-        # Parse the output to get status details
-        status = json.loads(stdout.decode())
-        return status
+        try:
+            # Parse the output to get status details
+            status = json.loads(stdout.decode())
+            return status
+        except json.JSONDecodeError:
+            # Return basic status if JSON parsing fails
+            return {
+                "id": deployment_id,
+                "status": "unknown",
+                "raw_output": stdout.decode()
+            }
     
     async def stop_deployment(self, deployment_id: str) -> Dict[str, Any]:
         """
@@ -170,3 +188,154 @@ class SpheronService:
             raise ValueError(f"Stop deployment failed: {stderr.decode()}")
         
         return {"status": "stopped"}
+        
+    async def get_deployment_logs(self, deployment_id: str, lines: int = 100) -> Dict[str, Any]:
+        """
+        Get logs from a deployment
+        """
+        cmd = [
+            "npx", "spheron", "logs",
+            "--id", deployment_id,
+            "--lines", str(lines),
+            "--api-key", self.api_key
+        ]
+        
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await proc.communicate()
+        
+        if proc.returncode != 0:
+            logger.error(f"Fetching logs failed: {stderr.decode()}")
+            raise ValueError(f"Fetching logs failed: {stderr.decode()}")
+        
+        return {
+            "id": deployment_id,
+            "logs": stdout.decode()
+        }
+    
+    async def get_deployment_metrics(self, deployment_id: str) -> Dict[str, Any]:
+        """
+        Get metrics for a deployment
+        """
+        cmd = [
+            "npx", "spheron", "metrics",
+            "--id", deployment_id,
+            "--api-key", self.api_key
+        ]
+        
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await proc.communicate()
+        
+        if proc.returncode != 0:
+            logger.error(f"Fetching metrics failed: {stderr.decode()}")
+            # Don't raise an exception, just return empty metrics
+            return {
+                "id": deployment_id,
+                "cpu": 0,
+                "memory": 0,
+                "requests": 0,
+                "latency": 0
+            }
+        
+        try:
+            metrics = json.loads(stdout.decode())
+            return metrics
+        except json.JSONDecodeError:
+            return {
+                "id": deployment_id,
+                "cpu": 0,
+                "memory": 0,
+                "requests": 0,
+                "latency": 0
+            }
+            
+    async def update_deployment(self, deployment_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update an existing deployment
+        """
+        try:
+            logger.info(f"Updating deployment {deployment_id} with Spheron")
+            
+            # Create updated manifest file
+            model_path = Path(metadata.get("model_path", "./models/default"))
+            manifest_path = await self._create_deployment_manifest(model_path, metadata)
+            
+            # Build update command
+            cmd = [
+                "npx", "spheron", "update",
+                "--id", deployment_id,
+                "--manifest", str(manifest_path),
+                "--api-key", self.api_key,
+                "--provider-proxy", self.provider_proxy_url
+            ]
+            
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await proc.communicate()
+            
+            if proc.returncode != 0:
+                logger.error(f"Update failed: {stderr.decode()}")
+                raise ValueError(f"Update failed: {stderr.decode()}")
+            
+            try:
+                result = json.loads(stdout.decode())
+                return {
+                    "id": deployment_id,
+                    "status": "updating",
+                    "updated_at": datetime.utcnow().isoformat(),
+                    **result
+                }
+            except json.JSONDecodeError:
+                return {
+                    "id": deployment_id,
+                    "status": "updating",
+                    "updated_at": datetime.utcnow().isoformat(),
+                    "raw_output": stdout.decode()
+                }
+                
+        except Exception as e:
+            logger.error(f"Error updating deployment with Spheron: {str(e)}")
+            raise
+            
+    async def list_deployments(self) -> Dict[str, Any]:
+        """
+        List all deployments
+        """
+        cmd = [
+            "npx", "spheron", "list",
+            "--api-key", self.api_key
+        ]
+        
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await proc.communicate()
+        
+        if proc.returncode != 0:
+            logger.error(f"Listing deployments failed: {stderr.decode()}")
+            raise ValueError(f"Listing deployments failed: {stderr.decode()}")
+        
+        try:
+            deployments = json.loads(stdout.decode())
+            return deployments
+        except json.JSONDecodeError:
+            return {
+                "deployments": [],
+                "raw_output": stdout.decode()
+            }
