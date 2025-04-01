@@ -238,7 +238,10 @@ async def evaluate_model(
                 
                 # Calculate confusion matrix for classification
                 conf_matrix = confusion_matrix(y_test_classes, y_pred_classes)
-                formatted_conf_matrix = format_confusion_matrix(conf_matrix)
+                formatted_conf_matrix = {
+                    'matrix': conf_matrix.tolist(),
+                    'labels': [str(i) for i in range(conf_matrix.shape[0])]
+                }
             except Exception as e:
                 logger.error(f"Error calculating classification metrics: {str(e)}")
                 # If classification metrics fail, fall back to regression metrics
@@ -275,21 +278,21 @@ async def evaluate_model(
 
         # Create evaluation record (using a temp user ID for development)
         evaluation = EvaluationModel(
-            model_id=model_id,
-            dataset_id=evaluation_in.dataset_id,
-            metrics=metrics,
-            parameters=evaluation_in.parameters.dict(),
-            owner_id=1,  # Temporary user ID for development
-            accuracy=metrics.get('accuracy'),
-            precision=metrics.get('precision'),
-            recall=metrics.get('recall'),
-            f1_score=metrics.get('f1_score'),
-            confusion_matrix=formatted_conf_matrix,
-            feature_importance=feature_importance,
-            execution_time=execution_time,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
+        model_id=model_id,
+        dataset_id=evaluation_in.dataset_id,
+        metrics=metrics,
+        parameters=evaluation_in.parameters.dict(),
+        owner_id=1,  # Temporary user ID for development
+        accuracy=metrics.get('accuracy'),
+        precision=metrics.get('precision'),
+        recall=metrics.get('recall'),
+        f1_score=metrics.get('f1_score'),
+        confusion_matrix=formatted_conf_matrix,  # This line uses your formatted matrix
+        feature_importance=feature_importance,
+        execution_time=execution_time,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
 
         db.add(evaluation)
         db.commit()
@@ -325,23 +328,31 @@ def get_evaluation(
         
     return evaluation
 
-@router.get("/list", response_model=List[Evaluation])
+@router.get("/list")
 def list_evaluations(
     db: Session = Depends(get_db),
-    # Temporarily removed: current_user: Any = Depends(get_current_user),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000)
 ) -> Any:
     """List all evaluations."""
-    try:
-        evaluations = db.query(EvaluationModel).order_by(
-            EvaluationModel.created_at.desc()
-        ).offset(skip).limit(limit).all()
+    evaluations = db.query(EvaluationModel).order_by(
+        EvaluationModel.created_at.desc()
+    ).offset(skip).limit(limit).all()
+    
+    result = []
+    for evaluation in evaluations:
+        # Convert to dictionary
+        eval_dict = evaluation.__dict__.copy()
+        if '_sa_instance_state' in eval_dict:
+            del eval_dict['_sa_instance_state']
         
-        return evaluations
-    except Exception as e:
-        logger.error(f"Error listing evaluations: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error listing evaluations: {str(e)}"
-        )
+        # Convert confusion matrix to dictionary format if it's a list
+        if eval_dict.get('confusion_matrix') and isinstance(eval_dict['confusion_matrix'], list):
+            eval_dict['confusion_matrix'] = {
+                'matrix': eval_dict['confusion_matrix'],
+                'labels': [str(i) for i in range(len(eval_dict['confusion_matrix']))]
+            }
+        
+        result.append(eval_dict)
+    
+    return result
