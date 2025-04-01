@@ -5,7 +5,7 @@ import {
   EvaluationCreateRequest,
   EvaluationFormState 
 } from '@/types/evaluation.types';
-import { evaluationService } from '@/lib/services/evaluation';
+import { evaluationService } from '@/services/evaluation.service';
 import { DEFAULT_EVALUATION_FORM } from '@/lib/constants/evaluation';
 
 export function useEvaluation() {

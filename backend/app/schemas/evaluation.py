@@ -1,6 +1,7 @@
-from typing import Optional, Dict, Any, List
+# app/schemas/evaluation.py
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 
 class MetricsConfig(BaseModel):
     accuracy: bool = False
@@ -33,7 +34,7 @@ class Evaluation(BaseModel):
     owner_id: int
     metrics: Dict[str, Any]
     parameters: Dict[str, Any]
-    confusion_matrix: Optional[Dict[str, List[Any]]] = None
+    confusion_matrix: Optional[Union[Dict[str, Any], List[List[int]]]] = None
     feature_importance: Optional[Dict[str, float]] = None
     execution_time: Optional[float] = None
     accuracy: Optional[float] = None

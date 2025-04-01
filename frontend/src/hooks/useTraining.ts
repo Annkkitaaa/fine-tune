@@ -8,7 +8,7 @@ import {
 import { trainingService } from "@/services/training.service";
 
 const TRAINING_IDS_KEY = "ml_platform_training_ids";
-
+const AUTO_REFRESH_INTERVAL = 5000; 
 // Define training form type
 interface TrainingForm {
   modelId: string;
