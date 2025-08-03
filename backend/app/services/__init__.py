@@ -12,7 +12,7 @@ from .ml.evaluation.metrics import MetricsCalculator
 from .ml.evaluation.analysis import DataAnalysisService
 
 # Deployment services
-from .deployment.service import DeploymentService
+from .deployment.service import ModelDeploymentService
 
 __all__ = [
     "create_access_token",
