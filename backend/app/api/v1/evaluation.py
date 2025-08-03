@@ -282,7 +282,7 @@ async def evaluate_model(
         dataset_id=evaluation_in.dataset_id,
         metrics=metrics,
         parameters=evaluation_in.parameters.dict(),
-        owner_id=1,  # Temporary user ID for development
+        owner_id=current_user.id if current_user else 1,  # Use authenticated user or fallback
         accuracy=metrics.get('accuracy'),
         precision=metrics.get('precision'),
         recall=metrics.get('recall'),
