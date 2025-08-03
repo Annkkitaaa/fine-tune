@@ -68,21 +68,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
+    console.log('🔥 Sign in form submitted!');
     e.preventDefault();
     const { email, password } = formData.signIn;
+    
+    console.log('📝 Sign in data:', { email, passwordLength: password.length });
     
     setFormErrors(prev => ({ ...prev, signIn: '' }));
     clearError();
 
     if (!email || !password) {
+      console.log('❌ Sign in validation failed: Missing fields');
       setFormErrors(prev => ({ ...prev, signIn: 'Please fill in all fields' }));
       return;
     }
 
     try {
+      console.log('✅ Sign in validation passed, calling login...');
       await login(email, password);
+      console.log('✅ Login successful, calling onClose...');
       onClose();
+      console.log('✅ onClose called');
     } catch (err) {
+      console.error('❌ Login error in modal:', err);
       const errorMessage = formatError(err);
       setFormErrors(prev => ({ ...prev, signIn: errorMessage }));
     }

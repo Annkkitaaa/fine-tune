@@ -142,7 +142,11 @@ export const Navbar: React.FC = () => {
 
       <AuthModal
         isOpen={isSignInModalOpen}
-        onClose={() => setIsSignInModalOpen(false)}
+        onClose={() => {
+          console.log('🔒 AuthModal onClose called, closing modal...');
+          setIsSignInModalOpen(false);
+          console.log('🔒 Modal state set to false');
+        }}
       />
     </>
   );
