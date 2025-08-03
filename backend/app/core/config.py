@@ -28,12 +28,15 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
     
     @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str):
             if v == "*":
                 return ["*"]
-            return [i.strip() for i in v.split(",")]
-        return v or []
+            # Handle comma-separated string
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return v
+        return ["*"]
     
     # JWT Configuration
     SECRET_KEY: str = "dev-secret-key-change-in-production"
