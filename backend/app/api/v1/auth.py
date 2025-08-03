@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import logging
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user, get_optional_user
 from app.core.config import settings
 from app.core.dev_config import BYPASS_AUTH
 from app.services.auth.jwt import create_access_token
