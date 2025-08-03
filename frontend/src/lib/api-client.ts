@@ -66,7 +66,7 @@ class ApiClient {
 
     this.instance.interceptors.response.use(
       (response) => {
-        console.log(`Response from ${response.config.url}: Success (${response.status})`);
+        // Response success
         return response.data;
       },
       (error) => {
