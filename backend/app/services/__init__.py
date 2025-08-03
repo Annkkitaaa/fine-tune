@@ -24,5 +24,5 @@ __all__ = [
     "SklearnTrainer",
     "MetricsCalculator",
     "DataAnalysisService",
-    "DeploymentService"
+    "ModelDeploymentService"
 ]
