@@ -70,7 +70,7 @@ class ApiClient {
         return response.data;
       },
       (error) => {
-        console.error("Response interceptor error:", error);
+        // Handle response error
         return Promise.reject(this.handleError(error));
       }
     );
