@@ -9,7 +9,8 @@ import os
 is_development = os.getenv("DEBUG") == "1" or os.getenv("ENVIRONMENT") == "development"
 
 # Set to True to bypass authentication checks
-BYPASS_AUTH = is_development
+# WARNING: Only enable for local development, never in production
+BYPASS_AUTH = is_development and os.getenv("BYPASS_AUTH", "false").lower() == "true"
 
 # Mock user data for development when auth is bypassed
 MOCK_USER = {
