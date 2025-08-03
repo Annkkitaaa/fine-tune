@@ -28,14 +28,13 @@ class ApiClient {
 
     this.setupInterceptors();
     
-    // Log the base URL for debugging
-    console.log("API client initialized with baseURL:", baseURL);
+    // API client initialized
   }
 
   private setupInterceptors() {
     this.instance.interceptors.request.use(
       (config) => {
-        console.log(`${config.method?.toUpperCase()} Request to: ${config.baseURL}${config.url}`);
+        // Request logging disabled in production
         
         // Don't set content-type for FormData requests
         if (config.data instanceof FormData) {
@@ -48,7 +47,7 @@ class ApiClient {
         // If auth bypass is enabled, always add mock token
         if (DEV_CONFIG.BYPASS_AUTH) {
           config.headers.Authorization = `Bearer ${DEV_CONFIG.MOCK_TOKEN}`;
-          console.log('Development mode: Adding mock auth token to request');
+          // Development mode: Adding mock auth token
         } else {
           // Normal authentication - add token if available
           const token = localStorage.getItem(TOKEN_KEY);
