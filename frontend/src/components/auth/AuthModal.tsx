@@ -89,32 +89,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleRegister = async (e: React.FormEvent) => {
+    console.log('🔥 Register form submitted!');
     e.preventDefault();
     const { email, password, confirmPassword, fullName } = formData.register;
+    
+    console.log('📝 Form data:', { email, fullName, passwordLength: password.length });
     
     setFormErrors(prev => ({ ...prev, register: '' }));
     clearError();
 
     try {
       if (!email || !password || !confirmPassword || !fullName) {
+        console.log('❌ Validation failed: Missing fields');
         throw new Error('Please fill in all fields');
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
+        console.log('❌ Validation failed: Invalid email');
         throw new Error('Please enter a valid email address');
       }
 
       const passwordError = validatePassword(password);
       if (passwordError) {
+        console.log('❌ Validation failed: Password error:', passwordError);
         throw new Error(passwordError);
       }
 
       if (password !== confirmPassword) {
+        console.log('❌ Validation failed: Passwords do not match');
         throw new Error('Passwords do not match');
       }
 
+      console.log('✅ Validation passed, calling register...');
       await register(email, password, fullName);
+      console.log('✅ Registration completed, showing success message');
       setRegistrationSuccess(true);
       
       setTimeout(() => {
@@ -122,6 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         resetForms();
       }, 2000);
     } catch (err) {
+      console.error('❌ Registration error in modal:', err);
       setRegistrationSuccess(false);
       const errorMessage = formatError(err);
       setFormErrors(prev => ({ ...prev, register: errorMessage }));

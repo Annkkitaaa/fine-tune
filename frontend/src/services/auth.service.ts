@@ -13,7 +13,7 @@ export const authService = {
       formData.append('password', password);
       formData.append('grant_type', 'password');
 
-      const response = await apiClient.request<LoginResponse>('/auth/login', {
+      const response = await apiClient.request<LoginResponse>('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -42,7 +42,7 @@ export const authService = {
         is_active: true
       };
 
-      const response = await apiClient.request<User>('/auth/register', {
+      const response = await apiClient.request<User>('/api/v1/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export const authService = {
   },
 
   getCurrentUser: async (): Promise<User> => {
-    return await apiClient.get<User>('/auth/me');
+    return await apiClient.get<User>('/api/v1/auth/me');
   },
 
   logout: () => {
