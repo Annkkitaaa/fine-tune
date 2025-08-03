@@ -5,8 +5,9 @@ const isDevelopment =
   window.location.hostname === '127.0.0.1';
 
 export const DEV_CONFIG = {
-  // Set to true to bypass all authentication (auto-enabled in development)
-  BYPASS_AUTH: isDevelopment,
+  // Set to true to bypass all authentication (requires explicit enable)
+  // WARNING: Only enable for local development testing
+  BYPASS_AUTH: isDevelopment && (localStorage.getItem('BYPASS_AUTH') === 'true'),
   
   // Mock user data for development
   MOCK_USER: {
