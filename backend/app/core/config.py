@@ -24,11 +24,13 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    # CORS Configuration
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    # CORS Configuration  
+    BACKEND_CORS_ORIGINS: Union[str, List[str]] = "*"
     
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if v is None or v == "":
+            return ["*"]
         if isinstance(v, str):
             if v == "*":
                 return ["*"]
