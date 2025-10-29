@@ -15,10 +15,10 @@ def test_imports():
         from main import create_app
         from app.core.config import settings
         from app.models import User, Dataset, MLModel, Training
-        print("  ✓ All imports successful")
+        print("  [OK] All imports successful")
         return True
     except Exception as e:
-        print(f"  ✗ Import failed: {e}")
+        print(f"  [FAIL] Import failed: {e}")
         return False
 
 def test_app_creation():
@@ -27,12 +27,12 @@ def test_app_creation():
     try:
         from main import create_app
         app = create_app()
-        print(f"  ✓ App created successfully")
-        print(f"  ✓ API version: {app.version}")
-        print(f"  ✓ Total routes: {len(app.routes)}")
+        print(f"  [OK] App created successfully")
+        print(f"  [OK] API version: {app.version}")
+        print(f"  [OK] Total routes: {len(app.routes)}")
         return True
     except Exception as e:
-        print(f"  ✗ App creation failed: {e}")
+        print(f"  [FAIL] App creation failed: {e}")
         return False
 
 def test_database():
@@ -45,10 +45,10 @@ def test_database():
         engine = create_engine(settings.DATABASE_URL)
         with engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
-            print("  ✓ Database connection successful")
+            print("  [OK] Database connection successful")
         return True
     except Exception as e:
-        print(f"  ✗ Database test failed: {e}")
+        print(f"  [FAIL] Database test failed: {e}")
         return False
 
 def test_config():
@@ -56,13 +56,13 @@ def test_config():
     print("\nTesting configuration...")
     try:
         from app.core.config import settings
-        print(f"  ✓ Project: {settings.PROJECT_NAME}")
-        print(f"  ✓ API path: {settings.API_V1_STR}")
-        print(f"  ✓ Database: {settings.DATABASE_URL[:20]}...")
-        print(f"  ✓ Supported frameworks: {', '.join(settings.SUPPORTED_FRAMEWORKS)}")
+        print(f"  [OK] Project: {settings.PROJECT_NAME}")
+        print(f"  [OK] API path: {settings.API_V1_STR}")
+        print(f"  [OK] Database: {settings.DATABASE_URL[:20]}...")
+        print(f"  [OK] Supported frameworks: {', '.join(settings.SUPPORTED_FRAMEWORKS)}")
         return True
     except Exception as e:
-        print(f"  ✗ Config test failed: {e}")
+        print(f"  [FAIL] Config test failed: {e}")
         return False
 
 def main():
