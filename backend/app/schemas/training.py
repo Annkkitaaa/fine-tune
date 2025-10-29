@@ -11,6 +11,8 @@ class TrainingStatus(str, Enum):
     STOPPED = "stopped"
 
 class TrainingBase(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     hyperparameters: Optional[Dict[str, Any]] = None
     model_id: int
     dataset_id: int
