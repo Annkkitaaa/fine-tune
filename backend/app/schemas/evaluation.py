@@ -28,6 +28,8 @@ class EvaluationUpdate(BaseModel):
     parameters: Optional[Dict[str, Any]] = None
 
 class Evaluation(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     id: int
     model_id: int
     dataset_id: int
