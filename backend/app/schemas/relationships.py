@@ -7,6 +7,8 @@ from .training import Training
 from .evaluation import Evaluation
 
 class TrainingWithRelations(Training):
+    model_config = {"protected_namespaces": ()}
+
     model: Optional[MLModel]  # Updated to MLModel
     dataset: Optional[Dataset]
 
@@ -14,6 +16,8 @@ class TrainingWithRelations(Training):
         from_attributes = True
 
 class EvaluationWithRelations(Evaluation):
+    model_config = {"protected_namespaces": ()}
+
     model: Optional[MLModel]  # Updated to MLModel
     dataset: Optional[Dataset]
     training: Optional[Training]
