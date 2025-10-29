@@ -91,7 +91,7 @@ export default defineConfig(({ mode }) => {
         'react-dom',
         'react-router-dom',
         'zustand',
-        '@radix-ui/react-alert',
+        '@radix-ui/react-alert-dialog',
         '@radix-ui/react-dialog',
         'lucide-react',
         '@spheron/protocol-sdk', // Added Spheron SDK
