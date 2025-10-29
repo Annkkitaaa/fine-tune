@@ -15,6 +15,8 @@ class SpheronDeploymentConfig(BaseModel):
     env_vars: Dict[str, str] = {}
     
 class SpheronDeploymentCreate(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     name: str
     description: Optional[str] = None
     model_id: int
