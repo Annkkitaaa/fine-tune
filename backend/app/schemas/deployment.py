@@ -30,6 +30,8 @@ class DeploymentUpdate(BaseModel):
     endpoint_url: Optional[str] = None
 
 class Deployment(DeploymentBase):
+    model_config = {"from_attributes": True, "protected_namespaces": ()}
+
     id: int
     owner_id: int
     status: str
@@ -41,6 +43,3 @@ class Deployment(DeploymentBase):
     end_time: Optional[datetime] = None
     error_message: Optional[str] = None
     metrics: Optional[Dict[str, Any]] = None
-
-    class Config:
-        from_attributes = True

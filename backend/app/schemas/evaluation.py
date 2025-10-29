@@ -28,7 +28,7 @@ class EvaluationUpdate(BaseModel):
     parameters: Optional[Dict[str, Any]] = None
 
 class Evaluation(BaseModel):
-    model_config = {"protected_namespaces": ()}
+    model_config = {"from_attributes": True, "protected_namespaces": ()}
 
     id: int
     model_id: int
@@ -45,6 +45,3 @@ class Evaluation(BaseModel):
     f1_score: Optional[float] = None
     created_at: datetime
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        from_attributes = True
