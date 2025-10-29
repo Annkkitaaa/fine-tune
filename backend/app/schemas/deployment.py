@@ -4,6 +4,8 @@ from datetime import datetime
 from app.schemas.spheron import SpheronDeploymentConfig
 
 class DeploymentBase(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     name: str
     description: Optional[str] = None
     model_id: int
