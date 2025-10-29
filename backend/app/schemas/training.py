@@ -30,6 +30,8 @@ class TrainingUpdate(BaseModel):
     gpu_usage: Optional[float] = None
 
 class Training(TrainingBase):
+    model_config = {"from_attributes": True, "protected_namespaces": ()}
+
     id: int
     owner_id: int
     project_id: Optional[int] = None
@@ -46,6 +48,3 @@ class Training(TrainingBase):
     cpu_usage: Optional[float] = None
     memory_usage: Optional[float] = None
     gpu_usage: Optional[float] = None
-
-    class Config:
-        from_attributes = True
