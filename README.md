@@ -231,15 +231,15 @@ python test_app.py
 ```
 
 This verifies:
-- ✅ All imports work
-- ✅ Database connection
-- ✅ App creation
-- ✅ 43 API routes loaded
+-  All imports work
+-  Database connection
+-  App creation
+-  43 API routes loaded
 
 ### Manual Testing
 See `TESTING.md` for comprehensive manual testing guide.
 
-## 📊 API Endpoints Overview
+##  API Endpoints Overview
 
 ### Authentication (`/api/v1/auth`)
 - `POST /auth/login` - User login
