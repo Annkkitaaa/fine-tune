@@ -3,16 +3,16 @@ import { apiClient } from '@/lib/api-client';
 import { Dataset, PreprocessingConfig } from '@/types/dataset.types';
 
 export const datasetsService = {
-  getDatasets: (params = {}) => 
-    apiClient.withRetry(() => 
-      apiClient.request<Dataset[]>('/data/list', {
+  getDatasets: (params = {}) =>
+    apiClient.withRetry(() =>
+      apiClient.request<Dataset[]>('/api/v1/data/list', {
         method: 'GET',
         params,
       })
     ),
-  
+
   getDataset: (id: number) =>
-    apiClient.request<Dataset>(`/data/${id}`),
+    apiClient.request<Dataset>(`/api/v1/data/${id}`),
   
   uploadDataset: (
     file: File, 
@@ -40,14 +40,14 @@ export const datasetsService = {
       formData.append('preprocessing_config', JSON.stringify(preprocessingConfig));
     }
     
-    return apiClient.request<Dataset>('/data/upload', {
+    return apiClient.request<Dataset>('/api/v1/data/upload', {
       method: 'POST',
       data: formData,
     });
   },
-  
+
   deleteDataset: (id: number) =>
-    apiClient.request(`/data/${id}`, {
+    apiClient.request(`/api/v1/data/${id}`, {
       method: 'DELETE',
     }),
 
@@ -57,7 +57,7 @@ export const datasetsService = {
       columns: string[];
       total_rows: number;
       datatypes: Record<string, string>;
-    }>(`/data/${id}/sample`, {
+    }>(`/api/v1/data/${id}/sample`, {
       method: 'GET',
       params: filters,
     }),
