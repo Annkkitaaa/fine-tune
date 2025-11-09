@@ -2,9 +2,9 @@
 
 A full-stack machine learning platform for training, evaluating, and deploying ML models with an intuitive web interface. Built with FastAPI and React.
 
-## ✨ Features
+## Features
 
-### 🎯 Core Functionality
+###  Core Functionality
 - **Dataset Management** - Upload, preview, and manage datasets (CSV, JSON, Parquet, Excel)
 - **ML Model Training** - Train models using PyTorch, TensorFlow, or Scikit-learn
 - **Automated Pipelines** - Data preprocessing, augmentation, and feature engineering
