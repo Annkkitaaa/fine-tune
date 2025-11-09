@@ -7,12 +7,12 @@ import {
 
 export const trainingService = {
   getTrainings: async () => {
-    const response = await api.get('/trainings/list');
+    const response = await api.get('/api/v1/trainings/list');
     return response.data;
   },
 
   createTraining: async (data: TrainingCreateRequest) => {
-    const response = await api.post('/trainings/create', data);
+    const response = await api.post('/api/v1/trainings/create', data);
     return response.data;
   },
 
