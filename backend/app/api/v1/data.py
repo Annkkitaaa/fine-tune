@@ -416,46 +416,46 @@ async def preprocess_dataset(
 async def save_processed_dataset(
     dataset_id: int,
     request: Dict[str, Any],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Save a processed dataset as a new dataset."""
     # Verify dataset exists
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
-    
+
     if not dataset:
         raise HTTPException(
             status_code=404,
             detail="Dataset not found"
         )
-    
+
     try:
         # Extract parameters
         processed_id = request.get("processed_id")
         name = request.get("name", f"{dataset.name}_processed")
         description = request.get("description", f"Processed version of {dataset.name}")
-        
+
         if not processed_id:
             raise HTTPException(
                 status_code=400,
                 detail="Missing processed_id parameter"
             )
-        
+
         # Find the processed file
         temp_dir = os.path.join(settings.TEMP_FOLDER, processed_id)
         processed_file_path = os.path.join(temp_dir, f"processed_{dataset.name}.parquet")
-        
+
         if not os.path.exists(processed_file_path):
             raise HTTPException(
                 status_code=404,
                 detail="Processed file not found. It may have expired."
             )
-        
+
         # Create user directory if it doesn't exist
-        # Using a fixed user_id=1 for development
-        user_upload_dir = os.path.join(settings.UPLOAD_FOLDER, "1")
+        user_upload_dir = os.path.join(settings.UPLOAD_FOLDER, str(current_user.id))
         os.makedirs(user_upload_dir, exist_ok=True)
         
         # Generate a unique filename
@@ -491,7 +491,7 @@ async def save_processed_dataset(
             "processed_from": dataset_id
         }
         
-        # Create new dataset record with hardcoded owner_id=1 for development
+        # Create new dataset record
         new_dataset = DatasetModel(
             name=name,
             description=description,
@@ -502,7 +502,7 @@ async def save_processed_dataset(
             num_features=num_features,
             preprocessing_config=dataset.preprocessing_config,
             meta_info=meta_info,
-            owner_id=1,  # Hardcoded for development
+            owner_id=current_user.id,
             project_id=dataset.project_id
         )
         
