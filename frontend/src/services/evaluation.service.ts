@@ -7,7 +7,7 @@ import {
 
 export const evaluationService = {
   listEvaluations: () =>
-    apiClient.request<Evaluation[]>('/evaluation/list'),
+    apiClient.request<Evaluation[]>('/api/v1/evaluation/list'),
 
   getEvaluation: (id: number) =>
     apiClient.request<Evaluation>(`/evaluation/${id}`),

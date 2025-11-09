@@ -9,17 +9,17 @@ import {
 
 export const deploymentService = {
   getDeployments: () =>
-    apiClient.request<Deployment[]>('/deployment/list'),
+    apiClient.request<Deployment[]>('/api/v1/deployment/list'),
 
   createDeployment: (data: DeploymentCreateRequest) =>
-    apiClient.request<Deployment>('/deployment/create', {
+    apiClient.request<Deployment>('/api/v1/deployment/create', {
       method: 'POST',
       data,
     }),
     
   // Add Spheron specific deployment method
   createSpheronDeployment: (data: SpheronDeploymentRequest) =>
-    apiClient.request<Deployment>('/deployment/spheron', {
+    apiClient.request<Deployment>('/api/v1/deployment/spheron', {
       method: 'POST',
       data,
     }),
