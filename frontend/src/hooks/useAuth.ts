@@ -112,40 +112,20 @@ export const useAuth = create<AuthState>()(
       },
 
       register: async (email: string, password: string, fullName: string) => {
-        console.log('🔧 Register function called with:', { email, fullName, bypassAuth: DEV_CONFIG.BYPASS_AUTH });
-        
-        // In development mode with bypass enabled, simulate successful registration
-        if (DEV_CONFIG.BYPASS_AUTH) {
-          console.log('Development mode: Authentication bypass enabled for register');
-          console.log(`Mock register with email: ${email}, name: ${fullName}`);
-          
-          set({ 
-            loading: false,
-            error: null
-          });
-          return;
-        }
-
-        // Normal registration process
         try {
-          console.log('🚀 Starting normal registration process...');
           set({ loading: true, error: null });
-          
-          console.log('📡 Calling authService.register...');
+
           await authService.register(email, password, fullName);
-          console.log('✅ Registration API call successful');
-          
+
           // Optionally auto-login after registration
           // await get().login(email, password);
-          
-          set({ 
+
+          set({
             loading: false,
             error: null
           });
-          console.log('✅ Registration completed successfully');
         } catch (error) {
-          console.error('❌ Registration failed:', error);
-          set({ 
+          set({
             loading: false,
             error: formatError(error)
           });
