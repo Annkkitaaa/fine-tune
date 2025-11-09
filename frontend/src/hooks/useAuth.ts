@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService } from '@/services/auth.service';
 import { formatError } from '@/components/utils/error';
-import { DEV_CONFIG } from '@/config/dev-config';
 
 interface User {
   id: number;
