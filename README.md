@@ -156,7 +156,7 @@ Password: Admin@123
 
 ### API Authentication in Swagger
 1. Go to http://localhost:8000/docs
-2. Click the **🔓 "Authorize"** button
+2. Click the ** "Authorize"** button
 3. Enter credentials:
    - Username: `admin@example.com`
    - Password: `Admin@123`
@@ -206,7 +206,7 @@ fine-tune/
 └── README.md                 # This file
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### Backend Configuration
 Edit `backend/app/core/config.py` to customize:
@@ -223,7 +223,7 @@ Create `frontend/.env` for environment variables:
 VITE_API_URL=http://localhost:8000
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Quick Backend Test
 ```bash
