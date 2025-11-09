@@ -33,8 +33,6 @@ class ApiClient {
   private setupInterceptors() {
     this.instance.interceptors.request.use(
       (config) => {
-        // Request logging disabled in production
-        
         // Don't set content-type for FormData requests
         if (config.data instanceof FormData) {
           config.headers = {
@@ -42,19 +40,13 @@ class ApiClient {
             'Content-Type': undefined, // Let browser handle it
           };
         }
-        
-        // If auth bypass is enabled, always add mock token
-        if (DEV_CONFIG.BYPASS_AUTH) {
-          config.headers.Authorization = `Bearer ${DEV_CONFIG.MOCK_TOKEN}`;
-          // Development mode: Adding mock auth token
-        } else {
-          // Normal authentication - add token if available
-          const token = localStorage.getItem(TOKEN_KEY);
-          if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-          }
+
+        // Add token if available
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
-        
+
         return config;
       },
       (error) => {
@@ -78,21 +70,14 @@ class ApiClient {
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<any>;
-      
+
       console.error("Axios Error:", {
         status: axiosError.response?.status,
         url: axiosError.config?.url,
         method: axiosError.config?.method,
         data: axiosError.response?.data
       });
-      
-      // In development mode with auth bypass, handle 401/403 errors specially
-      if (DEV_CONFIG.BYPASS_AUTH && 
-          (axiosError.response?.status === 401 || axiosError.response?.status === 403)) {
-        console.warn('Authentication error received but bypassed in development mode');
-        return new Error('Authentication error (bypassed in development mode)');
-      }
-      
+
       // Handle timeout errors specifically
       if (axiosError.code === 'ECONNABORTED') {
         return new Error('Request timed out. The server might be busy or unavailable.');
@@ -132,11 +117,8 @@ class ApiClient {
         case 400:
           return new Error('Invalid request data. Please check your inputs.');
         case 401:
-          if (!DEV_CONFIG.BYPASS_AUTH) {
-            localStorage.removeItem(TOKEN_KEY);
-            return new Error('Your session has expired. Please log in again.');
-          }
-          return new Error('Authentication error (development mode)');
+          localStorage.removeItem(TOKEN_KEY);
+          return new Error('Your session has expired. Please log in again.');
         case 403:
           return new Error('You do not have permission to perform this action.');
         case 404:
