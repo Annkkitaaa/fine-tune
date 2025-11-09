@@ -31,11 +31,11 @@ interface AuthState {
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
-      isAuthenticated: DEV_CONFIG.BYPASS_AUTH ? true : false,
-      user: DEV_CONFIG.BYPASS_AUTH ? DEV_CONFIG.MOCK_USER : null,
+      isAuthenticated: false,
+      user: null,
       loading: false,
       error: null,
-      token: DEV_CONFIG.BYPASS_AUTH ? DEV_CONFIG.MOCK_TOKEN : localStorage.getItem('access_token'),
+      token: localStorage.getItem('access_token'),
 
       clearError: () => set({ error: null }),
 
