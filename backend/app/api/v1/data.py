@@ -527,12 +527,13 @@ async def save_processed_dataset(
 @router.delete("/{dataset_id}")
 async def delete_dataset(
     dataset_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Delete a dataset."""
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
     
     if not dataset:
