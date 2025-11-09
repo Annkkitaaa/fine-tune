@@ -370,18 +370,4 @@ rm fine_tune.db
 alembic upgrade head
 ```
 
-### Authentication issues
-- Check that JWT secret is set in config
-- Verify token hasn't expired (8 day default)
-- Clear localStorage and re-login
 
-## 📞 Support
-
-For issues, questions, or feature requests:
-1. Check the Swagger documentation: http://localhost:8000/docs
-2. Review the `TESTING.md` file
-3. Check the troubleshooting section above
-
----
-
-**Made with ❤️ using FastAPI and React**
