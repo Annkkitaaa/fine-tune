@@ -27,7 +27,7 @@ A full-stack machine learning platform for training, evaluating, and deploying M
 - Real-time training metrics
 - Model versioning and backups
 
-### 📈 Evaluation & Monitoring
+###  Evaluation & Monitoring
 - Accuracy, Precision, Recall, F1-Score
 - Confusion matrix visualization
 - ROC-AUC curves
