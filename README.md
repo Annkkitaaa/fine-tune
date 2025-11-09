@@ -34,7 +34,7 @@ A full-stack machine learning platform for training, evaluating, and deploying M
 - Model comparison
 - Resource usage tracking (CPU, Memory, GPU)
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Backend
 - **Framework**: FastAPI (Python async web framework)
