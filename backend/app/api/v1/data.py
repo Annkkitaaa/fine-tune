@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime
 import uuid
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user_or_default
 from app.core.config import settings
 from app.models.dataset import Dataset as DatasetModel
 from app.schemas.dataset import Dataset, DatasetCreate
@@ -26,28 +26,12 @@ async def upload_data(
     name: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     preprocessing_config: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Upload a dataset file with optional preprocessing."""
     try:
-        # Check if there's at least one user in the system
-        user = db.query(User).first()
-        if not user:
-            # Create a default user if none exists
-            from app.core.security import get_password_hash
-            default_user = User(
-                email="admin@example.com",
-                full_name="Default Admin",
-                hashed_password=get_password_hash("defaultpassword"),
-                is_active=True,
-                is_superuser=True
-            )
-            db.add(default_user)
-            db.commit()
-            db.refresh(default_user)
-            owner_id = default_user.id
-        else:
-            owner_id = user.id
+        owner_id = current_user.id
 
         # Extract file extension and check if allowed
         file_ext = os.path.splitext(file.filename)[1].lower()
