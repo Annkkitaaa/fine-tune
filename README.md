@@ -12,7 +12,7 @@ A full-stack machine learning platform for training, evaluating, and deploying M
 - **Model Deployment** - Deploy locally or to decentralized infrastructure (Spheron)
 - **Authentication** - Secure JWT-based authentication system
 
-### 📊 Data Processing
+###  Data Processing
 - Missing value handling (mean, median, mode, drop)
 - Outlier detection and removal (Z-score, IQR)
 - Data scaling and normalization
@@ -20,7 +20,7 @@ A full-stack machine learning platform for training, evaluating, and deploying M
 - Feature engineering
 - Correlation analysis
 
-### 🏋️ Model Training
+###  Model Training
 - Support for multiple frameworks (PyTorch, TensorFlow, Scikit-learn)
 - Hyperparameter optimization (Grid Search, Random Search, Bayesian)
 - Background training jobs
