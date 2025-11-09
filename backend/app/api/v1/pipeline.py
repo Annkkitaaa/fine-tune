@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def process_data(
     *,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_default),
     request: PipelineRequest
 ) -> Any:
     """Process data through the pipeline"""
@@ -129,7 +129,7 @@ async def process_data(
 @router.get("/list", response_model=List[PipelineListResponse])
 async def list_pipelines(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_default),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
@@ -157,7 +157,7 @@ async def list_pipelines(
 async def get_pipeline(
     pipeline_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Get specific pipeline by ID"""
     try:
@@ -191,7 +191,7 @@ async def get_pipeline(
 async def delete_pipeline(
     pipeline_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Delete a pipeline"""
     try:
