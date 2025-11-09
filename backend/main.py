@@ -31,8 +31,21 @@ def create_app() -> FastAPI:
     async def startup_event():
         logger.info("Starting up application...")
         try:
-            # Initialize async resources if needed
-            pass
+            # Initialize database and create default user if needed
+            from app.db.init_db import init_db, create_default_user
+            from app.db.session import SessionLocal
+
+            # Create tables
+            init_db()
+            logger.info("Database tables initialized")
+
+            # Create default user if no users exist
+            db = SessionLocal()
+            try:
+                create_default_user(db)
+            finally:
+                db.close()
+
         except Exception as e:
             logger.error(f"Error during startup: {e}", exc_info=True)
             raise
