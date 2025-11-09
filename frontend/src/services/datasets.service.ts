@@ -106,7 +106,7 @@ export const datasetsService = {
       original_outliers: number;
       processed_outliers: number;
       column_stats: Record<string, any>;
-    }>(`/data/${id}/preprocess`, {
+    }>(`/api/v1/data/${id}/preprocess`, {
       method: 'POST',
       data: requestData,
       headers: {
@@ -118,14 +118,14 @@ export const datasetsService = {
       throw error;
     });
   },
-    
+
   saveProcessedDataset: (
     id: number,
     processedId: string,
     name: string,
     description?: string
   ) =>
-    apiClient.request<Dataset>(`/data/${id}/save-processed`, {
+    apiClient.request<Dataset>(`/api/v1/data/${id}/save-processed`, {
       method: 'POST',
       data: {
         processed_id: processedId,
