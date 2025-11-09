@@ -134,25 +134,9 @@ export const useAuth = create<AuthState>()(
       },
 
       logout: () => {
-        // In development mode with bypass enabled, just log the action but stay logged in
-        if (DEV_CONFIG.BYPASS_AUTH) {
-          console.log('Development mode: Authentication bypass enabled for logout');
-          console.log('Mock logout - still authenticated in development mode');
-          
-          set({ 
-            isAuthenticated: true, 
-            user: DEV_CONFIG.MOCK_USER,
-            token: DEV_CONFIG.MOCK_TOKEN,
-            error: null,
-            loading: false
-          });
-          return;
-        }
-
-        // Normal logout process
         localStorage.removeItem('access_token');
-        set({ 
-          isAuthenticated: false, 
+        set({
+          isAuthenticated: false,
           user: null,
           token: null,
           error: null,
