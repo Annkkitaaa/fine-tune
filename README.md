@@ -53,7 +53,7 @@ A full-stack machine learning platform for training, evaluating, and deploying M
 - **Charts**: Recharts
 - **HTTP Client**: Axios
 
-## 📦 Installation
+##  Installation
 
 ### Prerequisites
 - Python 3.12+
