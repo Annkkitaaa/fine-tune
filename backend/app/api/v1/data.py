@@ -152,6 +152,7 @@ async def upload_data(
 @router.get("/list", response_model=List[Dataset])
 async def list_datasets(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
@@ -159,7 +160,7 @@ async def list_datasets(
     try:
         datasets = (
             db.query(DatasetModel)
-            # Removed user filtering for development
+            .filter(DatasetModel.owner_id == current_user.id)
             .order_by(DatasetModel.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -175,20 +176,21 @@ async def list_datasets(
 @router.get("/{dataset_id}", response_model=Dataset)
 async def get_dataset(
     dataset_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Get a specific dataset by ID."""
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
-    
+
     if not dataset:
         raise HTTPException(
             status_code=404,
             detail="Dataset not found"
         )
-    
+
     return dataset
 
 @router.get("/{dataset_id}/sample")
@@ -197,13 +199,14 @@ async def get_dataset_sample(
     limit: int = Query(100, ge=1, le=1000),
     columns: Optional[str] = None,
     filter_condition: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Get a sample of data from a dataset with optional filtering."""
     # Verify dataset exists
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
     
     if not dataset:
@@ -280,13 +283,14 @@ async def get_dataset_sample(
 async def preprocess_dataset(
     dataset_id: int,
     preprocessing_request: Dict[str, Any],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Preprocess a dataset based on configuration."""
     # Verify dataset exists
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
     
     if not dataset:
