@@ -130,15 +130,15 @@ http://localhost:8000/docs
 ```
 http://localhost:8000/redoc
 ```
-- 📖 Clean, readable documentation
-- 📋 Organized by tags
+-  Clean, readable documentation
+-  Organized by tags
 
 ### OpenAPI Schema
 ```
 http://localhost:8000/api/v1/openapi.json
 ```
 
-## 🔐 Authentication
+##  Authentication
 
 ### Default Admin Credentials
 ```
@@ -146,7 +146,7 @@ Email: admin@example.com
 Password: Admin@123
 ```
 
-⚠️ **IMPORTANT**: Change the default password immediately in production!
+**IMPORTANT**: Change the default password immediately in production!
 
 ### How Authentication Works
 1. **Login** - POST `/api/v1/auth/login` with email/password
@@ -163,7 +163,7 @@ Password: Admin@123
 4. Click "Authorize"
 5. Now you can test all protected endpoints!
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 fine-tune/
