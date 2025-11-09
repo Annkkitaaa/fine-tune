@@ -563,12 +563,13 @@ async def delete_dataset(
 @router.get("/{dataset_id}/download")
 async def download_dataset(
     dataset_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Download a dataset file."""
     dataset = db.query(DatasetModel).filter(
-        DatasetModel.id == dataset_id
-        # Removed user filtering for development
+        DatasetModel.id == dataset_id,
+        DatasetModel.owner_id == current_user.id
     ).first()
     
     if not dataset:
