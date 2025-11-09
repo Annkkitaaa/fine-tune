@@ -10,7 +10,7 @@ console.log("API URL:", import.meta.env.VITE_API_URL);
 export const pipelineService = {
   listPipelines: () =>
     apiClient.withRetry(() => 
-      apiClient.request<Pipeline[]>('/pipeline/list')
+      apiClient.request<Pipeline[]>('/api/v1/pipeline/list')
     ),
 
   getPipeline: (pipelineId: string) =>
@@ -45,7 +45,7 @@ export const pipelineService = {
 
     console.log("Sending pipeline request:", payload);
 
-    return apiClient.request<Pipeline>('/pipeline/process', {
+    return apiClient.request<Pipeline>('/api/v1/pipeline/process', {
       method: 'POST',
       data: payload,
     });
