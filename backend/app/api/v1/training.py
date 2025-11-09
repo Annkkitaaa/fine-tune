@@ -14,7 +14,7 @@ router = APIRouter()
 async def create_training(
     *,
     db: Session = Depends(get_db),
-    current_user: Optional[Any] = Depends(get_optional_user),
+    current_user = Depends(get_current_user_or_default),
     training_in: TrainingCreate,
     background_tasks: BackgroundTasks
 ) -> Any:
@@ -28,7 +28,7 @@ async def create_training(
             dataset_id=training_in.dataset_id,
             hyperparameters=training_in.hyperparameters or {},
             status="queued",
-            owner_id=current_user.id if current_user else 1,
+            owner_id=current_user.id,
             updated_at=datetime.utcnow()
         )
         db.add(training)
