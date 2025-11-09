@@ -114,7 +114,7 @@ npm run dev
 
 The frontend will start on **http://localhost:5173**
 
-## 📚 API Documentation
+##  API Documentation
 
 FastAPI provides interactive API documentation out of the box:
 
