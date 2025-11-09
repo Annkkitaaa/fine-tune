@@ -124,7 +124,7 @@ http://localhost:8000/docs
 ```
 -  Interactive API testing
 -  Request/response schemas
-- 🔐 Built-in authentication
+-  Built-in authentication
 
 ### ReDoc (Alternative)
 ```
