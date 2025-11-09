@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 import json
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user_or_default, get_db
 from app.models.user import User
 from app.models.dataset import Dataset
 from app.models.pipeline import Pipeline
