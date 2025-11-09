@@ -2,8 +2,7 @@
 
 A full-stack machine learning platform for training, evaluating, and deploying ML models with an intuitive web interface. Built with FastAPI and React.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.0+-blue.svg)](https://reactjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)]
 
 
 
