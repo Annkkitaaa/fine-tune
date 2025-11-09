@@ -42,38 +42,24 @@ export const useAuth = create<AuthState>()(
       updateUser: (user: User) => set({ user }),
 
       checkAuth: async () => {
-        // In development mode with bypass enabled, always return authenticated
-        if (DEV_CONFIG.BYPASS_AUTH) {
-          console.log('Development mode: Authentication bypass enabled for checkAuth');
-          set({ 
-            isAuthenticated: true, 
-            user: DEV_CONFIG.MOCK_USER,
-            loading: false,
-            token: DEV_CONFIG.MOCK_TOKEN,
-            error: null
-          });
-          return;
-        }
-
-        // Normal authentication check
         try {
           set({ loading: true, error: null });
-          
+
           const token = localStorage.getItem('access_token');
           if (!token) {
-            set({ 
-              isAuthenticated: false, 
+            set({
+              isAuthenticated: false,
               user: null,
               loading: false,
               token: null,
-              error: null 
+              error: null
             });
             return;
           }
 
           const user = await authService.getCurrentUser();
-          set({ 
-            isAuthenticated: true, 
+          set({
+            isAuthenticated: true,
             user,
             loading: false,
             token,
@@ -81,8 +67,8 @@ export const useAuth = create<AuthState>()(
           });
         } catch (error) {
           localStorage.removeItem('access_token');
-          set({ 
-            isAuthenticated: false, 
+          set({
+            isAuthenticated: false,
             user: null,
             loading: false,
             token: null,
@@ -92,33 +78,17 @@ export const useAuth = create<AuthState>()(
       },
 
       login: async (email: string, password: string) => {
-        // In development mode with bypass enabled, simulate successful login
-        if (DEV_CONFIG.BYPASS_AUTH) {
-          console.log('Development mode: Authentication bypass enabled for login');
-          console.log(`Mock login with email: ${email}`);
-          
-          set({ 
-            isAuthenticated: true,
-            user: DEV_CONFIG.MOCK_USER,
-            token: DEV_CONFIG.MOCK_TOKEN,
-            loading: false,
-            error: null
-          });
-          return;
-        }
-
-        // Normal login process
         try {
           set({ loading: true, error: null });
-          
+
           const response = await authService.login(email, password);
           if (response.access_token) {
             localStorage.setItem('access_token', response.access_token);
-            
+
             // Fetch user details after successful login
             const user = await authService.getCurrentUser();
-            
-            set({ 
+
+            set({
               isAuthenticated: true,
               user,
               token: response.access_token,
@@ -130,7 +100,7 @@ export const useAuth = create<AuthState>()(
           }
         } catch (error) {
           localStorage.removeItem('access_token');
-          set({ 
+          set({
             isAuthenticated: false,
             user: null,
             token: null,
