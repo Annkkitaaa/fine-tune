@@ -282,7 +282,7 @@ See `TESTING.md` for comprehensive manual testing guide.
 - `GET /pipeline/list` - List pipeline runs
 - `GET /pipeline/{id}` - Get pipeline results
 
-## 🔒 Security Features
+##  Security Features
 
 - **JWT Authentication** - Secure token-based auth
 - **Password Hashing** - Bcrypt for password security
@@ -291,7 +291,7 @@ See `TESTING.md` for comprehensive manual testing guide.
 - **Input Validation** - Pydantic schemas
 - **File Upload Validation** - Type and size restrictions
 
-## 🎯 Recent Improvements
+##  Recent Improvements
 
 ### Authentication System Overhaul
 -  Unified authentication across all endpoints
