@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.api.deps import get_db, get_optional_user
+from app.api.deps import get_db, get_current_user_or_default
 from app.schemas.training import TrainingCreate, Training
 from app.services.ml.training.trainer import start_training_job
 from app.models.training import Training as TrainingModel
