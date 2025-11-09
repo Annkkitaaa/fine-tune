@@ -42,24 +42,17 @@ async def create_model(
             detail=f"Error creating model: {str(e)}"
         )
 
-# Update the rest of the endpoints similarly
 @router.get("/list", response_model=List[MLModelSchema])
 async def list_models(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_user),  # <-- Use optional user
+    current_user: User = Depends(get_current_user_or_default),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
     """Retrieve models."""
-    # For development: if no user, show all models or models with the mock user ID
-    if current_user:
-        owner_id = current_user.id
-    else:
-        owner_id = MOCK_USER_ID
-        
     models = (
         db.query(MLModel)
-        .filter(MLModel.owner_id == owner_id)
+        .filter(MLModel.owner_id == current_user.id)
         .offset(skip)
         .limit(limit)
         .all()
@@ -70,51 +63,45 @@ async def list_models(
 async def get_model(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_user)  # <-- Use optional user
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Get model by ID."""
-    query = db.query(MLModel).filter(MLModel.id == model_id)
-    
-    # Add owner filter only if authenticated
-    if current_user:
-        query = query.filter(MLModel.owner_id == current_user.id)
-    
-    model = query.first()
-    
+    model = db.query(MLModel).filter(
+        MLModel.id == model_id,
+        MLModel.owner_id == current_user.id
+    ).first()
+
     if not model:
         raise HTTPException(
             status_code=404,
             detail="Model not found"
         )
-    
+
     return model
 
 @router.delete("/{model_id}")
 async def delete_model(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_optional_user)  # <-- Use optional user
+    current_user: User = Depends(get_current_user_or_default)
 ) -> Any:
     """Delete model."""
-    query = db.query(MLModel).filter(MLModel.id == model_id)
-    
-    # Add owner filter only if authenticated
-    if current_user:
-        query = query.filter(MLModel.owner_id == current_user.id)
-    
-    model = query.first()
-    
+    model = db.query(MLModel).filter(
+        MLModel.id == model_id,
+        MLModel.owner_id == current_user.id
+    ).first()
+
     if not model:
         raise HTTPException(
             status_code=404,
             detail="Model not found"
         )
-    
+
     try:
         db.delete(model)
         db.commit()
         return {"message": "Model deleted successfully"}
-        
+
     except Exception as e:
         db.rollback()
         raise HTTPException(
