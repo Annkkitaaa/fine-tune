@@ -2,10 +2,6 @@
 
 A full-stack machine learning platform for training, evaluating, and deploying ML models with an intuitive web interface. Built with FastAPI and React.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)]
-
-
-
 ## ✨ Features
 
 ### 🎯 Core Functionality
