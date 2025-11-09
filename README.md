@@ -96,7 +96,7 @@ cd ../frontend
 npm install
 ```
 
-## 🚀 Running the Application
+##  Running the Application
 
 ### Start Backend Server
 ```bash
