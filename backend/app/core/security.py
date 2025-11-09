@@ -1,15 +1,7 @@
 # app/core/security.py
-from datetime import datetime, timedelta
-from typing import Any, Union
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# OAuth2 configuration
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"  # This should match your login endpoint
-)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against hashed password"""
