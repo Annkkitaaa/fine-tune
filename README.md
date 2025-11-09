@@ -294,11 +294,11 @@ See `TESTING.md` for comprehensive manual testing guide.
 ## 🎯 Recent Improvements
 
 ### Authentication System Overhaul
-- ✅ Unified authentication across all endpoints
-- ✅ Removed complex bypass logic
-- ✅ Consistent `get_current_user_or_default` dependency
-- ✅ Automatic default user creation on startup
-- ✅ Simplified frontend auth (removed 180+ lines of code)
+-  Unified authentication across all endpoints
+-  Removed complex bypass logic
+-  Consistent `get_current_user_or_default` dependency
+-  Automatic default user creation on startup
+-  Simplified frontend auth (removed 180+ lines of code)
 
 ### Code Quality
 -  Fixed all 18 files for consistent auth
