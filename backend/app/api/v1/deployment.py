@@ -20,7 +20,7 @@ async def restart_deployment(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user)
+    # current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """Restart a stopped deployment."""
     deployment = db.query(DeploymentModel).filter(
@@ -78,7 +78,7 @@ async def deploy_with_spheron(
     *,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user),
+    # current_user = Depends(get_current_user_or_default),
     deployment_in: SpheronDeploymentCreate
 ):
     """Deploy model using Spheron Protocol"""
@@ -219,7 +219,7 @@ async def create_deployment(
     *,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user),
+    # current_user = Depends(get_current_user_or_default),
     deployment_in: DeploymentCreate
 ) -> Any:
     """Create new local deployment."""
@@ -265,7 +265,7 @@ async def create_deployment(
 def list_deployments(
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user),
+    # current_user = Depends(get_current_user_or_default),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
@@ -278,7 +278,7 @@ def get_deployment(
     deployment_id: int,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user)
+    # current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """Get deployment by ID."""
     deployment = db.query(DeploymentModel).filter(
@@ -300,7 +300,7 @@ async def stop_deployment(
     deployment_id: int,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user)
+    # current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """Stop a running deployment."""
     deployment = db.query(DeploymentModel).filter(
@@ -352,7 +352,7 @@ async def delete_deployment(
     deployment_id: int,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user)
+    # current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """Delete deployment."""
     deployment = db.query(DeploymentModel).filter(
@@ -405,7 +405,7 @@ async def get_deployment_logs(
     lines: int = 100,
     db: Session = Depends(get_db),
     # Temporarily commented out for development
-    # current_user: Any = Depends(get_current_user)
+    # current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """Get deployment logs."""
     deployment = db.query(DeploymentModel).filter(
