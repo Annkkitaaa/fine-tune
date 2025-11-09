@@ -123,7 +123,7 @@ FastAPI provides interactive API documentation out of the box:
 http://localhost:8000/docs
 ```
 -  Interactive API testing
-- 📝 Request/response schemas
+-  Request/response schemas
 - 🔐 Built-in authentication
 
 ### ReDoc (Alternative)
