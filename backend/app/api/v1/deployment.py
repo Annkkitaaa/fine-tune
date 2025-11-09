@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user_or_default, get_db
 from app.schemas.deployment import DeploymentCreate, Deployment, SpheronDeploymentCreate
 from app.models.deployment import Deployment as DeploymentModel
 from app.services.deployment.service import ModelDeploymentService

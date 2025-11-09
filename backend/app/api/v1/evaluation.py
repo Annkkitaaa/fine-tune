@@ -15,7 +15,7 @@ import tensorflow as tf
 from datetime import datetime
 import logging
 
-from app.api.deps import get_db  # Temporarily removed: get_current_user
+from app.api.deps import get_db, get_current_user_or_default
 from app.schemas.evaluation import EvaluationCreate, Evaluation
 from app.models.evaluation import Evaluation as EvaluationModel
 from app.services.ml.training.trainer import load_dataset

@@ -50,7 +50,7 @@ async def create_training(
 @router.get("/list", response_model=List[Training])
 async def list_trainings(
     db: Session = Depends(get_db),
-    current_user: Optional[Any] = Depends(get_optional_user),
+    current_user = Depends(get_current_user_or_default),
     skip: int = 0,
     limit: int = 100
 ) -> Any:
@@ -75,7 +75,7 @@ async def list_trainings(
 async def get_training(
     training_id: int,
     db: Session = Depends(get_db),
-    current_user: Optional[Any] = Depends(get_optional_user)
+    current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """
     Get training job details.
@@ -102,7 +102,7 @@ async def get_training(
 async def cancel_training(
     training_id: int,
     db: Session = Depends(get_db),
-    current_user: Optional[Any] = Depends(get_optional_user)
+    current_user = Depends(get_current_user_or_default)
 ) -> Any:
     """
     Cancel running training job.
