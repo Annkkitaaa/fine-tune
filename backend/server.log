@@ -32,3 +32,111 @@ INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     127.0.0.1:51230 - "GET / HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58718 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53527 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50907 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\Ankita Singh\AppData\Roaming\Python\Python312\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+INFO:     127.0.0.1:56594 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59725 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59725 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59725 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51394 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62183 - "GET /api/v1/openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53542 - "OPTIONS /data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53542 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53542 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59803 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64184 - "OPTIONS /data/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64184 - "POST /data/upload HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52753 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52753 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52753 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52753 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52753 - "GET /data/list?skip=0&limit=50 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58401 - "POST /data/upload HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63675 - "GET /api/v1/data/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51497 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63150 - "OPTIONS /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63150 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60004 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58920 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49326 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50606 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49326 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49326 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49326 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60815 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60815 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60815 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54092 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54092 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54092 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65151 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65151 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65151 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65273 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65273 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65273 - "OPTIONS /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65273 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53285 - "OPTIONS /api/v1/data/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53285 - "POST /api/v1/data/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53285 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "OPTIONS /api/v1/data/1/sample HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51675 - "GET /api/v1/data/1/sample HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62039 - "GET /api/v1/trainings/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63586 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55237 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62039 - "GET /api/v1/trainings/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63586 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62625 - "OPTIONS /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58253 - "OPTIONS /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62625 - "GET /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62625 - "GET /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "GET /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "GET /api/v1/deployment/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "OPTIONS /pipeline/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49832 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61061 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61061 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58648 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59741 - "OPTIONS /pipeline/process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59741 - "POST /pipeline/process HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59741 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59741 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59741 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59741 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59741 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57984 - "GET /pipeline/list HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58627 - "OPTIONS /api/v1/evaluation/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65385 - "OPTIONS /api/v1/evaluation/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63850 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64672 - "GET /api/v1/data/list?skip=0&limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58627 - "GET /api/v1/evaluation/list HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:63850 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58627 - "GET /api/v1/evaluation/list HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:57333 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57333 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57074 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57074 - "GET /api/v1/openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62449 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /api/v1/models/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /api/v1/models/list HTTP/1.1" 200 OK
