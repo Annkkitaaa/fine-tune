@@ -1,6 +1,5 @@
 // src/lib/api-client.ts
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
-import { DEV_CONFIG } from '@/config/dev-config';
 
 // Make sure this matches your backend URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
